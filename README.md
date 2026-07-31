@@ -1,46 +1,34 @@
-# CTH · Comité de Cartera — Versión 1.7.1
+# Comité de Cartera CTH · V1.8.0
 
-Aplicación web local para procesar reportes `SaldosDeCarteraSencillo_Report.xlsx`, generar los escenarios **Normal** y **Proyectado**, comparar resultados y descargar dos consolidaciones Excel independientes.
+Aplicación local para procesar reportes de cartera, generar escenarios Normal y Proyectado y presentar resultados ejecutivos.
 
-## Corrección V1.7.1
+## Salidas disponibles
 
-- El indicador de procesamiento permanece oculto antes de iniciar.
-- El spinner se detiene y desaparece al finalizar, tanto en éxito como en error.
-- Se reforzó el control con `hidden`, `display` y atributos de accesibilidad para evitar que estilos del navegador mantengan visible el indicador.
+La versión 1.8 mantiene intactos los archivos Excel estándar y añade una alternativa visual por escenario:
 
-## Flujo operativo
+- Excel estándar Normal.
+- Dashboard Enterprise Normal en HTML autónomo.
+- Excel estándar Proyectado.
+- Dashboard Enterprise Proyectado en HTML autónomo.
 
-1. Configurar horizonte, umbral y reclasificación.
-2. Cargar los reportes originales correspondientes a una misma fecha.
-3. Procesar ambos escenarios.
-4. Descargar los archivos Normal y Proyectado.
+Los dashboards Enterprise se generan exclusivamente con los resultados ya calculados por el motor validado. No recalculan ni modifican la lógica de negocio.
 
-## Cambios de interfaz V1.7
+## Características del Dashboard Enterprise
 
-- Parametrización ubicada antes de la carga y el procesamiento.
-- Logo institucional CTH integrado localmente en `assets/logo_CTH.png`.
-- Identificación de la desarrolladora: **Lizbeth Sanipatín**.
-- Indicadores del sistema compactos y secundarios.
-- Eliminación de la sección visible de validaciones y alertas.
-- Mensajes de procesamiento simplificados para el usuario final.
-- Privacidad presentada en una sola línea discreta.
-- Panel ejecutivo reorganizado para aprovechar mejor el espacio.
-
-## Reglas funcionales conservadas
-
-- Procesamiento independiente por empresa.
-- Plantilla COMITE integrada y utilizada como base limpia.
-- No se sobrescribe la plantilla original.
-- Valores monetarios del HTML expresados en miles y sin decimales.
-- Excel con precisión contable.
-- No Devenga calculado únicamente con sus columnas específicas.
-- Castigados excluidos de la cartera activa.
-- Escenario Proyectado parametrizable sin alterar el escenario Normal.
+- Tarjetas KPI.
+- Filtro interactivo por empresa.
+- Gráficos de exposición por Total, No Devenga y Vencida.
+- Indicadores circulares de riesgo.
+- Resumen ejecutivo automático.
+- Matriz detallada.
+- Impresión o guardado como PDF.
+- Archivo autocontenido, utilizable sin conexión.
+- Valores monetarios en miles, redondeados y sin decimales.
 
 ## Privacidad
 
-Los archivos seleccionados se procesan localmente en la memoria del navegador. No se transmiten a GitHub ni a servidores externos.
+Los archivos se procesan localmente en la memoria del navegador. No se transmiten a servidores externos.
 
 ## Desarrolladora
 
-**Lizbeth Sanipatín**
+Lizbeth Sanipatín.

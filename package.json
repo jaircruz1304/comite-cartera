@@ -1,8 +1,8 @@
 {
   "name": "comite-cartera-github-pages",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "private": true,
-  "description": "Procesador local CTH de escenarios Normal y Proyectado con interfaz ejecutiva.",
+  "description": "Procesador local CTH de escenarios Normal y Proyectado con interfaz ejecutiva y exportación Enterprise.",
   "scripts": {
     "test": "node tests/processor-smoke.js && node tests/projection-smoke.js && node tests/ooxml-smoke.js && node tests/repository-smoke.js"
   }
