@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Procesamiento local de escenarios Normal y Proyectado para el Comité de Cartera CTH.">
+  <meta name="description" content="Procesamiento local o desde Google Drive de escenarios Normal y Proyectado para el Comité de Cartera CTH.">
   <title>CTH | Comité de Cartera</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -22,7 +22,7 @@
         </div>
       </div>
       <div class="header-meta">
-        <span class="local-chip"><i></i>Procesamiento local</span>
+        <span class="local-chip" id="modeHeaderChip"><i></i>Procesamiento local</span>
         <small>Desarrolladora</small>
         <strong>Lizbeth Sanipatín</strong>
       </div>
@@ -42,8 +42,8 @@
     <section class="page-intro">
       <div>
         <span class="section-kicker">ANÁLISIS DE ESCENARIOS</span>
-        <h2>Configure, cargue y procese la cartera en un solo flujo</h2>
-        <p>Una carga genera el escenario real, el proyectado y su comparación, sin modificar los archivos originales.</p>
+        <h2>Configure, seleccione el origen y procese la cartera en un solo flujo</h2>
+        <p>Elija procesamiento local o desde Google Drive; una sola ejecución genera el escenario Normal, el Proyectado y su comparación.</p>
       </div>
       <div class="unit-badge"><span>UNIDAD DE PRESENTACIÓN</span><strong>Valores monetarios en miles</strong><small>HTML sin decimales · Excel con precisión contable</small></div>
     </section>
@@ -86,9 +86,29 @@
       <p class="operational-note"><strong>Regla activa:</strong> se incrementan los días de morosidad según el horizonte y solo se reclasifican operaciones que cumplen las condiciones definidas.</p>
     </section>
 
-    <section class="workflow-card upload-card">
+    <section class="workflow-card source-mode-card">
       <div class="workflow-heading">
         <div class="step-number">02</div>
+        <div class="heading-copy">
+          <span class="section-kicker">MODALIDAD DE PROCESAMIENTO</span>
+          <h3>Seleccionar origen de los reportes</h3>
+          <p>El procesamiento local permanece intacto; Drive agrega una alternativa corporativa y automatizada.</p>
+        </div>
+        <span class="parameter-status" id="sourceModeStatus">Modo local activo</span>
+      </div>
+      <div class="source-mode-selector" role="tablist" aria-label="Modalidad de origen">
+        <button type="button" class="source-mode-option active" id="sourceModeLocal" data-mode="LOCAL" role="tab" aria-selected="true">
+          <span class="mode-icon">PC</span><span><strong>Procesamiento local</strong><small>Carga manual desde el navegador. Sin acceso a Drive.</small></span><b>Actual</b>
+        </button>
+        <button type="button" class="source-mode-option" id="sourceModeDrive" data-mode="DRIVE" role="tab" aria-selected="false">
+          <span class="mode-icon drive-icon">D</span><span><strong>Procesamiento desde Drive</strong><small>Conecta una carpeta y extrae los reportes seleccionados.</small></span><b>Enterprise</b>
+        </button>
+      </div>
+    </section>
+
+    <section class="workflow-card upload-card">
+      <div class="workflow-heading">
+        <div class="step-number">03</div>
         <div class="heading-copy">
           <span class="section-kicker">CARGA DE ARCHIVOS</span>
           <h3>Incorporar reportes originales</h3>
@@ -97,17 +117,37 @@
         <div class="count-chip"><span id="fileCountBadge">0</span> archivos</div>
       </div>
 
-      <label class="drop-zone" id="sourceDrop" for="sourceInput">
-        <input id="sourceInput" type="file" accept=".xlsx" multiple>
-        <div class="upload-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div id="localSourcePanel">
+        <label class="drop-zone" id="sourceDrop" for="sourceInput">
+          <input id="sourceInput" type="file" accept=".xlsx" multiple>
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="drop-copy">
+            <strong>Arrastre los reportes aquí o selecciónelos desde su equipo</strong>
+            <small>Formato admitido: .xlsx · Los archivos permanecen en la memoria del navegador.</small>
+          </div>
+          <span class="select-file-button">Seleccionar archivos</span>
+        </label>
+      </div>
+
+      <div class="drive-source-panel" id="driveSourcePanel" hidden>
+        <div class="drive-connection-bar">
+          <div><span class="drive-status-dot" id="driveStatusDot"></span><span><strong id="driveConnectionStatus">Drive no conectado</strong><small id="driveConnectionDetail">Configura OAuth y autoriza acceso de solo lectura.</small></span></div>
+          <div class="drive-actions"><button class="button button-secondary" id="driveConnectButton" type="button">Conectar Drive</button><button class="button button-text" id="driveDisconnectButton" type="button" hidden>Desconectar</button></div>
         </div>
-        <div class="drop-copy">
-          <strong>Arrastre los reportes aquí o selecciónelos desde su equipo</strong>
-          <small>Formato admitido: .xlsx · Los archivos permanecen en la memoria del navegador.</small>
+        <div class="drive-folder-grid">
+          <label class="field-card drive-folder-field"><span>Carpeta de reportes</span><input id="driveFolderInput" type="text" placeholder="Pegue el enlace o ID de la carpeta"></label>
+          <button class="button button-secondary" id="driveScanButton" type="button" disabled>Buscar reportes</button>
+          <button class="button button-secondary" id="driveAutoSelectButton" type="button" disabled>Seleccionar últimos por empresa</button>
+          <button class="button button-primary" id="driveImportButton" type="button" disabled>Usar archivos seleccionados</button>
         </div>
-        <span class="select-file-button">Seleccionar archivos</span>
-      </label>
+        <div class="drive-config-notice" id="driveConfigNotice" hidden><strong>Configuración requerida:</strong> complete el ID de cliente OAuth en <code>js/config.js</code>.</div>
+        <div class="drive-list-wrap">
+          <table class="drive-file-table"><thead><tr><th></th><th>Empresa</th><th>Archivo</th><th>Modificado</th><th>Tamaño</th></tr></thead><tbody id="driveFileTableBody"><tr><td colspan="5" class="placeholder-cell">Conecte Drive y busque la carpeta de reportes.</td></tr></tbody></table>
+        </div>
+      </div>
+
       <p class="file-status" id="sourceStatus">Selecciona uno o varios reportes de saldos.</p>
       <ul class="file-list" id="sourceList"></ul>
     </section>
@@ -116,7 +156,7 @@
       <div class="action-grid">
         <div class="action-column process-column">
           <div class="workflow-heading compact-heading">
-            <div class="step-number">03</div>
+            <div class="step-number">04</div>
             <div class="heading-copy"><span class="section-kicker">PROCESAMIENTO</span><h3>Generar ambos escenarios</h3><p>Ejecute el análisis una vez verificados los parámetros y archivos.</p></div>
           </div>
           <button class="button button-primary button-large" id="processButton" disabled>
@@ -134,12 +174,24 @@
 
         <div class="action-column download-column">
           <div class="workflow-heading compact-heading">
-            <div class="step-number">04</div>
+            <div class="step-number">05</div>
             <div class="heading-copy"><span class="section-kicker">DESCARGAS</span><h3>Obtener resultados</h3><p>Descargue cada consolidado de forma independiente.</p></div>
           </div>
-          <div class="download-actions">
-            <button class="button button-download" id="downloadNormalButton" disabled><span><strong>Escenario Normal</strong><small>Excel consolidado</small></span><b>↓</b></button>
-            <button class="button button-download projected-download" id="downloadProjectedButton" disabled><span><strong>Escenario Proyectado</strong><small>Excel consolidado</small></span><b>↓</b></button>
+          <div class="export-groups">
+            <article class="export-group">
+              <header><span>ESCENARIO</span><strong>Normal</strong><small>Resultados directos del archivo fuente.</small></header>
+              <div class="export-options">
+                <button class="button button-download" id="downloadNormalButton" disabled><span><strong>Excel estándar</strong><small>Formato actual y precisión contable</small></span><b>↓</b></button>
+                <button class="button button-download button-enterprise" id="downloadNormalEnterpriseButton" disabled><span><strong>PDF Enterprise</strong><small>Documento nativo ejecutivo y corporativo</small></span><b>PDF</b></button>
+              </div>
+            </article>
+            <article class="export-group projected-export-group">
+              <header><span>ESCENARIO</span><strong>Proyectado</strong><small>Resultados según parámetros configurados.</small></header>
+              <div class="export-options">
+                <button class="button button-download projected-download" id="downloadProjectedButton" disabled><span><strong>Excel estándar</strong><small>Formato actual y precisión contable</small></span><b>↓</b></button>
+                <button class="button button-download button-enterprise projected-enterprise" id="downloadProjectedEnterpriseButton" disabled><span><strong>PDF Enterprise</strong><small>Documento nativo ejecutivo y corporativo</small></span><b>PDF</b></button>
+              </div>
+            </article>
           </div>
           <button class="button button-text" id="resetButton">Limpiar sesión y comenzar de nuevo</button>
         </div>
@@ -204,18 +256,24 @@
       </div>
     </section>
 
-    <p class="privacy-line"><strong>Privacidad por diseño:</strong> Los archivos se procesan localmente en la memoria del navegador y no se transmiten a servidores externos.</p>
+    <p class="privacy-line" id="privacyLine"><strong>Privacidad por diseño:</strong> <span id="privacyText">En modo local, los archivos se procesan únicamente en la memoria del navegador. En modo Drive, se descargan directamente desde Google Drive a la sesión del navegador y no se almacenan en servidores de la aplicación.</span></p>
   </main>
 
   <footer class="enterprise-footer">
-    <div><strong>CTH · Comité de Cartera</strong><span>Versión 1.7.1 · Escenarios Normal y Proyectado</span></div>
+    <div><strong>CTH · Comité de Cartera</strong><span>Versión 1.9.1 · Local + Drive · PDF Enterprise nativo</span></div>
     <div><span>Desarrolladora</span><strong>Lizbeth Sanipatín</strong></div>
   </footer>
 
   <script src="vendor/jszip.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+  <script src="js/config.js"></script>
   <script src="js/processor.js"></script>
   <script src="js/projection.js"></script>
   <script src="js/ooxml.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/pdf.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
