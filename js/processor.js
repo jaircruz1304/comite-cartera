@@ -419,12 +419,19 @@
 
   function formatMoneyThousands(value) {
     if (value == null) return '—';
-    return (Number(value) / 1000).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return Math.round(Number(value) / 1000).toLocaleString('es-EC', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
   }
 
   function formatPercent(value) {
     if (value == null) return '—';
-    return Number(value).toLocaleString('es-EC', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return Number(value).toLocaleString('es-EC', {
+      style: 'percent',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
   }
 
   function semaphore(value, threshold) {

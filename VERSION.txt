@@ -1,2 +1,1 @@
-1.3.0
-Optimización de apertura de plantilla y lectura rápida de archivos fuente.
+1.4.0

@@ -4,7 +4,9 @@
   const P = window.PortfolioProcessor;
 
   const state = {
-    templateFile: null,
+    templateBuffer: null,
+    templateReady: false,
+    templateError: '',
     sourceFiles: [],
     analyses: [],
     outputBlob: null,
@@ -17,26 +19,26 @@
 
   document.addEventListener('DOMContentLoaded', init);
 
-  function init() {
+  async function init() {
     cacheElements();
     bindEvents();
     updateFilesUI();
     renderEmptyDashboard();
     checkRuntime();
+    await loadEmbeddedTemplate();
   }
 
   function cacheElements() {
     [
-      'templateInput', 'sourceInput', 'templateDrop', 'sourceDrop', 'templateStatus',
-      'sourceStatus', 'sourceList', 'processButton', 'downloadButton', 'resetButton',
-      'progressPanel', 'progressBar', 'progressText', 'messageArea', 'dashboard',
-      'companyFilter', 'summaryTableBody', 'validationList', 'chartArea',
-      'cutDateLabel', 'privacyBadge', 'fileCountBadge'
+      'sourceInput', 'sourceDrop', 'sourceStatus', 'sourceList', 'processButton',
+      'downloadButton', 'resetButton', 'progressPanel', 'progressBar', 'progressText',
+      'messageArea', 'dashboard', 'companyFilter', 'summaryTableBody',
+      'validationList', 'chartArea', 'cutDateLabel', 'privacyBadge',
+      'fileCountBadge', 'templateRepoStatus'
     ].forEach((id) => { els[id] = document.getElementById(id); });
   }
 
   function bindEvents() {
-    els.templateInput.addEventListener('change', (event) => setTemplateFile(event.target.files[0]));
     els.sourceInput.addEventListener('change', (event) => addSourceFiles([...event.target.files]));
     els.processButton.addEventListener('click', processFiles);
     els.downloadButton.addEventListener('click', downloadOutput);
@@ -45,31 +47,46 @@
       state.selectedCompany = event.target.value;
       renderDashboard();
     });
-
-    setupDropZone(els.templateDrop, (files) => setTemplateFile(files[0]));
     setupDropZone(els.sourceDrop, addSourceFiles);
   }
 
   function checkRuntime() {
     if (!window.XLSX) {
-      showMessage('error', 'No se cargó el lector rápido de Excel (SheetJS). La red puede estar bloqueando los CDN. Recarga con Ctrl+F5.');
-      els.processButton.disabled = true;
+      showMessage('error', 'No se cargó el lector rápido de Excel (SheetJS). Recarga con Ctrl+F5.');
       return;
     }
     if (!window.XlsxPopulate) {
-      showMessage('error', 'No se cargó el generador de Excel (XlsxPopulate). La red puede estar bloqueando los CDN. Recarga con Ctrl+F5.');
-      els.processButton.disabled = true;
+      showMessage('error', 'No se cargó el generador de Excel (XlsxPopulate). Recarga con Ctrl+F5.');
       return;
     }
     if (!window.JSZip) {
-      showMessage('error', 'No se cargó el componente de compatibilidad Excel (JSZip). Recarga con Ctrl+F5.');
-      els.processButton.disabled = true;
+      showMessage('error', 'No se cargó el validador de archivos Excel (JSZip). Recarga con Ctrl+F5.');
       return;
     }
     if (!P) {
-      showMessage('error', 'No se cargó el motor de reglas de cartera. Confirma que js/processor.js exista y respete mayúsculas/minúsculas.');
-      els.processButton.disabled = true;
+      showMessage('error', 'No se cargó el motor de reglas de cartera. Confirma que js/processor.js exista.');
       return;
+    }
+    updateFilesUI();
+  }
+
+  async function loadEmbeddedTemplate() {
+    state.templateReady = false;
+    state.templateError = '';
+    if (els.templateRepoStatus) els.templateRepoStatus.textContent = 'Verificando plantilla integrada…';
+    try {
+      const response = await fetch('assets/COMITE_BASE.xlsx', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const buffer = await response.arrayBuffer();
+      if (buffer.byteLength < 1000) throw new Error('El archivo de plantilla está vacío o incompleto.');
+      await validateXlsxPackage(buffer, ['CTH', 'F12', 'F8', 'F11']);
+      state.templateBuffer = buffer;
+      state.templateReady = true;
+      if (els.templateRepoStatus) els.templateRepoStatus.textContent = 'Plantilla COMITE integrada y validada.';
+    } catch (error) {
+      state.templateError = error && error.message ? error.message : String(error);
+      if (els.templateRepoStatus) els.templateRepoStatus.textContent = 'No se pudo cargar la plantilla integrada.';
+      showMessage('error', `La plantilla del repositorio no está disponible: ${state.templateError}`);
     }
     updateFilesUI();
   }
@@ -96,17 +113,7 @@
     return file && /\.xlsx$/i.test(file.name);
   }
 
-  function setTemplateFile(file) {
-    clearMessage();
-    if (!file) return;
-    if (!isXlsx(file)) {
-      showMessage('error', 'La plantilla debe ser un archivo Excel con extensión .xlsx.');
-      return;
-    }
-    state.templateFile = file;
-    state.outputBlob = null;
-    updateFilesUI();
-  }
+
 
   function addSourceFiles(files) {
     clearMessage();
@@ -136,11 +143,6 @@
   }
 
   function updateFilesUI() {
-    els.templateStatus.textContent = state.templateFile
-      ? `${state.templateFile.name} · ${formatBytes(state.templateFile.size)}`
-      : 'No se ha cargado una plantilla.';
-    els.templateDrop.classList.toggle('ready', Boolean(state.templateFile));
-
     els.sourceStatus.textContent = state.sourceFiles.length
       ? `${state.sourceFiles.length} archivo(s) de cartera seleccionados.`
       : 'No se han cargado archivos de cartera.';
@@ -162,12 +164,13 @@
       els.sourceList.appendChild(item);
     });
 
-    els.processButton.disabled = !(state.templateFile && state.sourceFiles.length && window.XLSX && window.XlsxPopulate && window.JSZip && P);
+    const runtimeReady = Boolean(window.XLSX && window.XlsxPopulate && window.JSZip && P);
+    els.processButton.disabled = !(state.templateReady && state.sourceFiles.length && runtimeReady);
     els.downloadButton.disabled = !state.outputBlob;
   }
 
   async function processFiles() {
-    if (!state.templateFile || !state.sourceFiles.length) return;
+    if (!state.templateReady || !state.sourceFiles.length) return;
 
     setBusy(true);
     clearMessage();
@@ -179,8 +182,8 @@
       updateProgress(4, 'Validando archivos seleccionados…');
       enforceFileLimits();
 
-      updateProgress(10, 'Preparando una copia liviana de la plantilla COMITE…');
-      const reportWorkbook = await openTemplateWorkbook(state.templateFile);
+      updateProgress(10, 'Abriendo la plantilla integrada del repositorio…');
+      const reportWorkbook = await openTemplateWorkbook();
       validateTemplateWorkbook(reportWorkbook);
       prepareFreshTemplate(reportWorkbook);
 
@@ -191,7 +194,6 @@
         const span = 44;
         updateProgress(start + Math.round((index / state.sourceFiles.length) * span), `Leyendo y analizando ${file.name}…`);
         await yieldToBrowser();
-
         const values = await readSourceMatrix(file);
         const analysis = P.analyzeValues(values, file.name);
         analysis.sourceValues = values;
@@ -200,24 +202,35 @@
 
       updateProgress(67, 'Validando empresas, fechas y consistencia…');
       state.cutDateKey = P.validateDateGroup(analyses);
-
       analyses.sort((a, b) => companyOrder(a.company.code) - companyOrder(b.company.code));
 
-      updateProgress(73, 'Escribiendo resultados sobre la plantilla limpia…');
+      updateProgress(73, 'Escribiendo resultados sobre una copia nueva…');
       analyses.forEach((analysis) => writeCompanyReport(reportWorkbook, analysis));
 
       updateProgress(83, 'Creando hojas ORIGEN y control de auditoría…');
       analyses.forEach((analysis) => addOriginSheet(reportWorkbook, analysis));
       addControlSheet(reportWorkbook, analyses);
 
-      updateProgress(92, 'Generando el archivo Excel consolidado…');
-      state.outputBlob = await withTimeout(reportWorkbook.outputAsync(), 60000, 'La generación del Excel superó 60 segundos. Cierra otras pestañas y vuelve a intentar.');
+      updateProgress(91, 'Generando y validando el archivo Excel…');
+      const generated = await withTimeout(
+        reportWorkbook.outputAsync({ type: 'arraybuffer' }),
+        90000,
+        'La generación del Excel superó 90 segundos. Cierra otras pestañas y vuelve a intentar.'
+      );
+      const outputBuffer = toStandaloneArrayBuffer(generated);
+      await validateXlsxPackage(outputBuffer, [
+        'CONTROL_EJECUCION',
+        ...analyses.flatMap((item) => [item.company.reportSheet, `ORIGEN_${item.company.code}`])
+      ]);
+      state.outputBlob = new Blob([outputBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
       state.outputName = `COMITE_Consolidado_${P.fileDateKey(analyses[0].metrics.cutDate)}_FINAL.xlsx`;
       state.analyses = analyses;
 
-      updateProgress(100, 'Proceso completado correctamente.');
+      updateProgress(100, 'Proceso completado y archivo Excel validado.');
       renderDashboard();
-      showMessage('success', `Se procesaron ${analyses.length} empresa(s). El archivo ${state.outputName} está listo para descargar.`);
+      showMessage('success', `Se procesaron ${analyses.length} empresa(s). ${state.outputName} fue validado y está listo para descargar.`);
     } catch (error) {
       console.error(error);
       showMessage('error', error && error.message ? error.message : 'Ocurrió un error inesperado durante el procesamiento.');
@@ -228,106 +241,19 @@
     }
   }
 
-  async function openTemplateWorkbook(file) {
-    const prepared = await prepareTemplatePackage(file);
-    updateProgress(14, `Plantilla optimizada: ${prepared.removedSheets} hoja(s) histórica(s) omitida(s) y ${prepared.normalizedCells} celda(s) normalizada(s).`);
-    await yieldToBrowser();
-
+  async function openTemplateWorkbook() {
+    if (!state.templateBuffer) throw new Error('La plantilla integrada no está disponible. Recarga la página.');
+    const copy = state.templateBuffer.slice(0);
     try {
       return await withTimeout(
-        XlsxPopulate.fromDataAsync(prepared.arrayBuffer),
+        XlsxPopulate.fromDataAsync(copy),
         30000,
-        'La plantilla tardó demasiado en abrirse. Recarga la página y vuelve a intentarlo.'
+        'La plantilla integrada tardó demasiado en abrirse. Recarga la página y vuelve a intentarlo.'
       );
     } catch (error) {
       const message = String(error && error.message ? error.message : error);
-      throw new Error(`No se pudo abrir la copia limpia de la plantilla: ${message}`);
+      throw new Error(`No se pudo abrir la plantilla integrada: ${message}`);
     }
-  }
-
-  async function prepareTemplatePackage(file) {
-    const input = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(input);
-    const parser = new DOMParser();
-    const serializer = new XMLSerializer();
-    const workbookPath = 'xl/workbook.xml';
-    const relsPath = 'xl/_rels/workbook.xml.rels';
-    const contentTypesPath = '[Content_Types].xml';
-
-    const workbookEntry = zip.file(workbookPath);
-    const relsEntry = zip.file(relsPath);
-    const contentTypesEntry = zip.file(contentTypesPath);
-    if (!workbookEntry || !relsEntry || !contentTypesEntry) {
-      throw new Error('La plantilla no tiene una estructura XLSX válida.');
-    }
-
-    const workbookDoc = parser.parseFromString(await workbookEntry.async('string'), 'application/xml');
-    const relsDoc = parser.parseFromString(await relsEntry.async('string'), 'application/xml');
-    const contentTypesDoc = parser.parseFromString(await contentTypesEntry.async('string'), 'application/xml');
-    assertXmlDocument(workbookDoc, 'xl/workbook.xml');
-    assertXmlDocument(relsDoc, 'xl/_rels/workbook.xml.rels');
-    assertXmlDocument(contentTypesDoc, '[Content_Types].xml');
-
-    const relationshipById = new Map();
-    [...relsDoc.getElementsByTagNameNS('*', 'Relationship')].forEach((node) => {
-      relationshipById.set(node.getAttribute('Id'), node);
-    });
-
-    const removableSheets = [...workbookDoc.getElementsByTagNameNS('*', 'sheet')].filter((sheet) => {
-      const name = String(sheet.getAttribute('name') || '').toUpperCase();
-      return name.startsWith('ORIGEN_') || name === 'CONTROL_EJECUCION';
-    });
-
-    const removedParts = new Set();
-    removableSheets.forEach((sheet) => {
-      const relationId = sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id')
-        || sheet.getAttribute('r:id');
-      const relationship = relationshipById.get(relationId);
-      if (relationship) {
-        const target = relationship.getAttribute('Target') || '';
-        const normalizedPart = normalizeZipPart(target);
-        if (normalizedPart) {
-          removedParts.add(normalizedPart);
-          zip.remove(normalizedPart);
-          const sheetRels = normalizedPart.replace('xl/worksheets/', 'xl/worksheets/_rels/') + '.rels';
-          zip.remove(sheetRels);
-        }
-        relationship.parentNode.removeChild(relationship);
-      }
-      sheet.parentNode.removeChild(sheet);
-    });
-
-    [...contentTypesDoc.getElementsByTagNameNS('*', 'Override')].forEach((node) => {
-      const partName = String(node.getAttribute('PartName') || '').replace(/^\//, '');
-      if (removedParts.has(partName)) node.parentNode.removeChild(node);
-    });
-
-    zip.file(workbookPath, serializer.serializeToString(workbookDoc));
-    zip.file(relsPath, serializer.serializeToString(relsDoc));
-    zip.file(contentTypesPath, serializer.serializeToString(contentTypesDoc));
-
-    const worksheetNames = Object.keys(zip.files).filter((name) => /^xl\/worksheets\/sheet[^/]*\.xml$/i.test(name));
-    let normalizedCells = 0;
-    for (const name of worksheetNames) {
-      const entry = zip.file(name);
-      if (!entry) continue;
-      const xml = await entry.async('string');
-      const result = normalizeEmptyInlineStrings(xml);
-      normalizedCells += result.changes;
-      if (result.xml !== xml) zip.file(name, result.xml);
-    }
-
-    const arrayBuffer = await zip.generateAsync({
-      type: 'arraybuffer',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 3 }
-    });
-
-    return {
-      arrayBuffer,
-      removedSheets: removableSheets.length,
-      normalizedCells
-    };
   }
 
   async function readSourceMatrix(file) {
@@ -360,38 +286,6 @@
     return normalizeMatrix(values);
   }
 
-  function normalizeEmptyInlineStrings(xml) {
-    let changes = 0;
-    let normalized = xml;
-    const patterns = [
-      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)\/>/g,
-      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<\/c>/g,
-      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is\s*\/>\s*<\/c>/g,
-      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is>\s*<\/is>\s*<\/c>/g
-    ];
-    patterns.forEach((pattern) => {
-      normalized = normalized.replace(pattern, (match, before, after) => {
-        changes += 1;
-        return `<c${before}${after}/>`;
-      });
-    });
-    return { xml: normalized, changes };
-  }
-
-  function normalizeZipPart(target) {
-    const value = String(target || '').replace(/\\/g, '/');
-    if (!value) return '';
-    if (value.startsWith('/')) return value.slice(1);
-    if (value.startsWith('xl/')) return value;
-    return `xl/${value.replace(/^\.\//, '')}`;
-  }
-
-  function assertXmlDocument(documentNode, label) {
-    if (documentNode.getElementsByTagName('parsererror').length) {
-      throw new Error(`No se pudo interpretar ${label} dentro de la plantilla.`);
-    }
-  }
-
   function withTimeout(promise, milliseconds, message) {
     return Promise.race([
       promise,
@@ -406,13 +300,44 @@
   }
 
   function enforceFileLimits() {
-    const allFiles = [state.templateFile, ...state.sourceFiles];
+    const allFiles = [...state.sourceFiles];
     const maxPerFile = 25 * 1024 * 1024;
     const maxTotal = 80 * 1024 * 1024;
     const oversized = allFiles.find((file) => file.size > maxPerFile);
     if (oversized) throw new Error(`El archivo ${oversized.name} supera el límite recomendado de 25 MB.`);
     const total = allFiles.reduce((sum, file) => sum + file.size, 0);
     if (total > maxTotal) throw new Error('El conjunto de archivos supera 80 MB. Procesa menos empresas por ejecución.');
+  }
+
+  function toStandaloneArrayBuffer(value) {
+    if (value instanceof ArrayBuffer) return value;
+    if (ArrayBuffer.isView(value)) {
+      return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+    }
+    throw new Error('El generador no devolvió un archivo Excel binario válido.');
+  }
+
+  async function validateXlsxPackage(arrayBuffer, requiredSheets) {
+    let zip;
+    try {
+      zip = await JSZip.loadAsync(arrayBuffer);
+    } catch (error) {
+      throw new Error('El archivo generado no es un paquete XLSX válido.');
+    }
+    const requiredParts = ['[Content_Types].xml', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels'];
+    const missingParts = requiredParts.filter((part) => !zip.file(part));
+    if (missingParts.length) throw new Error(`El Excel generado está incompleto: falta ${missingParts.join(', ')}.`);
+
+    let parsed;
+    try {
+      parsed = XLSX.read(arrayBuffer, { type: 'array', bookSheets: true });
+    } catch (error) {
+      throw new Error(`El Excel generado no superó la verificación de apertura: ${error.message || error}`);
+    }
+    const names = parsed.SheetNames || [];
+    const missingSheets = (requiredSheets || []).filter((name) => !names.includes(name));
+    if (missingSheets.length) throw new Error(`El Excel generado no contiene las hojas requeridas: ${missingSheets.join(', ')}.`);
+    return true;
   }
 
   function validateTemplateWorkbook(workbook) {
@@ -498,9 +423,13 @@
 
     const sheet = workbook.addSheet(name);
     const values = analysis.sourceValues;
-    if (values.length) sheet.cell('A1').value(values);
-
     const columnCount = values.reduce((max, row) => Math.max(max, row.length), 0);
+    const rectangularValues = values.map((row) => Array.from({ length: columnCount }, (_, index) => {
+      const value = row[index];
+      return value === undefined ? null : value;
+    }));
+    if (rectangularValues.length && columnCount) sheet.cell('A1').value(rectangularValues);
+
     for (let column = 1; column <= columnCount; column += 1) {
       const maxLength = values.slice(0, 35).reduce((max, row) => {
         const value = row[column - 1];
@@ -509,7 +438,7 @@
       sheet.column(column).width(Math.min(32, Math.max(10, maxLength + 2)));
     }
 
-    if (values.length >= 6) {
+    if (values.length >= 6 && columnCount) {
       sheet.range(`A5:${columnLetter(columnCount)}6`).style({
         bold: true,
         fill: 'DCE6F1',
@@ -724,7 +653,7 @@
     document.getElementById('kpiGrid').innerHTML = '';
     els.chartArea.innerHTML = '<p class="placeholder">Los gráficos aparecerán después de procesar los archivos.</p>';
     els.summaryTableBody.innerHTML = '<tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr>';
-    els.validationList.innerHTML = '<li class="validation-info"><span></span>Carga la plantilla y los archivos de cartera para iniciar.</li>';
+    els.validationList.innerHTML = '<li class="validation-info"><span></span>Carga los archivos de cartera para iniciar.</li>';
   }
 
   function downloadOutput() {
@@ -740,14 +669,12 @@
   }
 
   function resetSession() {
-    state.templateFile = null;
     state.sourceFiles = [];
     state.analyses = [];
     state.outputBlob = null;
     state.outputName = '';
     state.cutDateKey = '';
     state.selectedCompany = 'ALL';
-    els.templateInput.value = '';
     els.sourceInput.value = '';
     clearMessage();
     updateFilesUI();
@@ -758,7 +685,8 @@
   function setBusy(isBusy) {
     document.body.classList.toggle('is-busy', isBusy);
     els.progressPanel.hidden = !isBusy;
-    els.processButton.disabled = isBusy || !(state.templateFile && state.sourceFiles.length && window.XLSX && window.XlsxPopulate && window.JSZip && P);
+    const runtimeReady = Boolean(window.XLSX && window.XlsxPopulate && window.JSZip && P);
+    els.processButton.disabled = isBusy || !(state.templateReady && state.sourceFiles.length && runtimeReady);
     els.resetButton.disabled = isBusy;
     els.downloadButton.disabled = isBusy || !state.outputBlob;
   }

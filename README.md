@@ -1,157 +1,107 @@
-# Comité de Cartera — GitHub Pages v1.3
+# Comité de Cartera — GitHub Pages v1.4
 
-Aplicación web local para procesar la plantilla COMITE y archivos SaldosDeCarteraSencillo_Report sin enviar información a servidores.
+Aplicación web local-first para procesar archivos `SaldosDeCarteraSencillo_Report.xlsx` y generar un consolidado Excel conforme a las reglas del proyecto **INFORMES CTH 2026**.
 
-## Mejora de rendimiento v1.3
+## Cambio principal de esta versión
 
-- Elimina de la copia en memoria las hojas ORIGEN históricas antes de abrir la plantilla.
-- Usa SheetJS para leer rápidamente los archivos fuente.
-- Usa XlsxPopulate únicamente para conservar el diseño y generar el consolidado.
-- Normaliza celdas Excel incompatibles y aplica tiempos máximos de espera.
-- La plantilla original nunca se sobrescribe.
-
-Aplicación web estática para procesar archivos `SaldosDeCarteraSencillo_Report.xlsx` utilizando una copia limpia de la plantilla `COMITE.xlsx`.
-
-## Qué hace
-
-- Lee la plantilla y los archivos de cartera directamente en el navegador.
-- No sobrescribe la plantilla original.
-- Procesa cada empresa por separado: CTH, F12, F8 y F11.
-- Excluye filas de total, subtotales, encabezados, vacíos y duplicados exactos.
-- Separa cartera castigada de la cartera activa.
-- Calcula No Devenga exclusivamente con las columnas de esa agrupación.
-- Clasifica `NOR` y `GRA` como NORMAL, y `RE` como REESTRUCTURADA.
-- Usa `Dias Morosidad` para los segmentos 60–90 y +90.
-- Deja en blanco Cartera Castigada y Bienes en Pago cuando no hay información.
-- Genera hojas `ORIGEN_*` y una hoja `CONTROL_EJECUCION`.
-- Descarga un archivo nuevo: `COMITE_Consolidado_AAAAMMDD_FINAL.xlsx`.
-
-## Privacidad
-
-La aplicación es **local-first**. Los archivos seleccionados se procesan en la memoria del navegador. Este proyecto no incluye código para cargar los Excel a un servidor, a GitHub ni a una base de datos.
-
-No subas al repositorio:
-
-- La plantilla real.
-- Archivos de cartera.
-- Consolidaciones generadas.
-- Datos personales, financieros o confidenciales.
-
-## Estructura
+La plantilla ya no se carga manualmente. Se encuentra integrada en el repositorio en:
 
 ```text
-comite-cartera-github-pages/
+assets/COMITE_BASE.xlsx
+```
+
+El usuario únicamente selecciona los reportes de saldos de cartera. En cada ejecución, la aplicación abre una copia nueva de la plantilla integrada, completa los resultados actuales y genera un archivo distinto. La plantilla del repositorio nunca se sobrescribe.
+
+## Flujo de uso
+
+1. Abrir la aplicación publicada en GitHub Pages.
+2. Seleccionar los archivos de CTH, F12, F8 y F11 correspondientes a una misma fecha.
+3. Presionar **Procesar cartera**.
+4. Revisar KPIs, validaciones y resumen por empresa.
+5. Presionar **Descargar consolidado**.
+
+## Reglas funcionales implementadas
+
+- Procesamiento independiente por empresa.
+- Exclusión de filas de total, subtotales y duplicados exactos.
+- Cartera castigada separada de la cartera activa.
+- Cartera vencida calculada desde sus columnas específicas.
+- No Devenga calculado exclusivamente desde la agrupación correspondiente.
+- `NOR` y `GRA` clasificados como NORMAL.
+- `RE` clasificado como REESTRUCTURADA.
+- Segmentos 60–90 y +90 calculados con `Dias Morosidad`.
+- Bienes en Pago, Provisiones BEP y Neto BEP en blanco cuando no existe información.
+- Hojas `ORIGEN_*` con los datos actuales de cada archivo.
+- Hoja `CONTROL_EJECUCION` para auditoría.
+
+## Presentación de cifras
+
+En el panel HTML:
+
+- Todos los importes monetarios se dividen para 1.000.
+- Se muestran redondeados a números enteros, sin decimales.
+- Las operaciones se muestran como números enteros.
+- Los porcentajes se muestran sin decimales.
+
+En el archivo Excel:
+
+- Los importes siguen expresados en miles.
+- Se conservan dos decimales para el detalle contable.
+- Las operaciones se mantienen como enteros.
+
+## Validación del archivo descargado
+
+Antes de habilitar la descarga, la aplicación:
+
+1. Genera el libro como `ArrayBuffer`.
+2. Verifica que sea un paquete XLSX válido.
+3. Confirma la presencia de `workbook.xml` y las relaciones internas.
+4. Intenta abrirlo nuevamente con el lector Excel del navegador.
+5. Comprueba que existan las hojas COMITE, ORIGEN y CONTROL requeridas.
+6. Solo después crea el archivo descargable.
+
+Esto evita entregar un archivo incompleto o dañado.
+
+## Estructura del repositorio
+
+```text
+comite-cartera
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml
 ├── assets/
+│   ├── COMITE_BASE.xlsx
 │   └── styles.css
 ├── js/
 │   ├── app.js
 │   └── processor.js
+├── tests/
+│   └── processor-smoke.js
 ├── .nojekyll
 ├── index.html
-└── README.md
+├── README.md
+├── PRIVACIDAD.md
+├── LICENSE
+├── VERSION.txt
+└── package.json
 ```
 
-## Publicación en GitHub Pages
+## Actualización en GitHub Desktop
 
-### 1. Crear el repositorio
-
-1. Inicia sesión en GitHub.
-2. Crea un repositorio nuevo.
-3. Nombre sugerido: `comite-cartera`.
-4. Para una cuenta GitHub Free, utiliza un repositorio público.
-5. No agregues archivos Excel reales.
-
-### 2. Subir el contenido
-
-1. Descomprime el paquete entregado.
-2. En el repositorio, selecciona **Add file → Upload files**.
-3. Sube todos los archivos y carpetas conservando la estructura.
-4. Confirma el commit en la rama `main`.
-
-### 3. Activar GitHub Pages
-
-1. Abre **Settings** del repositorio.
-2. Entra en **Pages**.
-3. En **Build and deployment → Source**, selecciona **GitHub Actions**.
-4. Abre la pestaña **Actions** y espera que finalice `Deploy to GitHub Pages`.
-5. La dirección tendrá el formato:
+1. Copiar todo el contenido de esta versión sobre la carpeta local del repositorio.
+2. Aceptar el reemplazo de archivos.
+3. Verificar que `assets/COMITE_BASE.xlsx` esté incluido.
+4. Registrar el commit:
 
 ```text
-https://TU-USUARIO.github.io/comite-cartera/
+Integrar plantilla y validar descarga Excel
 ```
 
-Documentación oficial:
+5. Presionar **Commit to main**.
+6. Presionar **Push origin**.
+7. Esperar que GitHub Actions termine correctamente.
+8. Recargar la página con `Ctrl + F5`.
 
-- https://docs.github.com/en/pages/getting-started-with-github-pages
-- https://docs.github.com/en/get-started/start-your-journey/deploying-your-website-automatically
+## Privacidad
 
-## Uso diario
-
-1. Abre la dirección publicada.
-2. Carga la plantilla `COMITE.xlsx` original.
-3. Carga los archivos `SaldosDeCarteraSencillo_Report` del mismo corte.
-4. Pulsa **Procesar cartera**.
-5. Revisa el dashboard y las validaciones.
-6. Pulsa **Descargar consolidado**.
-7. Abre el Excel y verifica la hoja `CONTROL_EJECUCION`.
-
-## Requisitos de los archivos
-
-### Plantilla
-
-Debe contener estas hojas:
-
-- `CTH`
-- `F12`
-- `F8`
-- `F11`
-
-### Archivos fuente
-
-Deben contener:
-
-- `#`
-- `CaliF.Cont.`
-- `Dias Morosidad`
-- `Cartera Castigada`
-- Agrupación `Cartera Por Vencer`
-- Agrupación `Cartera que no devenga Intereses`
-- Agrupación `Cartera Vencida`
-
-Todos los archivos cargados en una ejecución deben corresponder a la misma fecha de corte.
-
-## Dependencia externa
-
-La aplicación carga `xlsx-populate` 1.21.0 desde UNPKG mediante una referencia con integridad SRI. Esta biblioteca se usa porque trabaja sobre el contenido XML del libro y está orientada a conservar las características y estilos existentes de una plantilla.
-
-Proyecto y documentación:
-
-- https://github.com/dtjohnson/xlsx-populate
-- https://www.npmjs.com/package/xlsx-populate
-
-## Validación realizada
-
-El motor de cálculo fue contrastado con los cuatro archivos del corte del 29 de julio de 2026 y reproduce los resultados del consolidado previamente validado.
-
-## Límites de esta versión
-
-- Requiere conexión a Internet para cargar la biblioteca `xlsx-populate` desde UNPKG.
-- No almacena históricos entre sesiones.
-- No tiene autenticación propia.
-- GitHub Pages es un alojamiento estático; la aplicación no ejecuta un servidor.
-- Las hojas ORIGEN conservan los valores y la estructura tabular, pero no necesariamente todos los elementos visuales del archivo fuente.
-
-## Próximas fases sugeridas
-
-1. Comparación automática entre dos fechas de corte.
-2. Histórico descargable en JSON o Excel.
-3. Configuración editable de umbrales de semáforos.
-4. Modo sin conexión con la biblioteca incluida dentro del repositorio.
-5. Pruebas automáticas de regresión con archivos anonimizados.
-
-## Corrección 1.2.0 — compatibilidad con celdas vacías
-
-Esta versión incorpora una normalización automática de ciertas celdas vacías que Excel puede guardar como `inlineStr` sin contenido. Ese patrón es válido para Excel, pero provoca en `xlsx-populate 1.21.0` el error `Cannot read properties of undefined (reading 'children')`. La aplicación corrige únicamente ese detalle interno en la copia temporal cargada en memoria, sin sobrescribir ni modificar la plantilla original.
+Los reportes seleccionados se procesan en la memoria del navegador. No se cargan al repositorio ni se envían a un servidor por esta aplicación. La plantilla integrada no contiene reportes reales ni información histórica de cartera.

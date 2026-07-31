@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Procesamiento local de reportes del Comité de Cartera desde archivos Excel.">
   <meta name="theme-color" content="#16324f">
-  <title>Comité de Cartera | Procesador Excel v1.3</title>
+  <title>Comité de Cartera | Procesador Excel v1.4</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -30,44 +30,34 @@
     <section class="hero-panel">
       <div>
         <span class="step-tag">Flujo controlado</span>
-        <h2>Carga una plantilla limpia y los archivos de cada empresa</h2>
-        <p>El sistema recalcula los indicadores con los datos actuales, conserva trazabilidad en hojas ORIGEN y genera un archivo nuevo sin sobrescribir la plantilla.</p>
+        <h2>Carga únicamente los reportes de saldos de cada empresa</h2>
+        <p>La plantilla COMITE está integrada en el repositorio. El sistema procesa los reportes localmente, conserva la trazabilidad y genera un Excel nuevo y validado.</p>
       </div>
       <ol class="mini-steps" aria-label="Pasos principales">
-        <li><span>1</span>Cargar plantilla</li>
-        <li><span>2</span>Cargar carteras</li>
-        <li><span>3</span>Procesar y validar</li>
+        <li><span>1</span>Cargar reportes</li>
+        <li><span>2</span>Procesar cartera</li>
+        <li><span>3</span>Validar resultados</li>
         <li><span>4</span>Descargar Excel</li>
       </ol>
     </section>
 
-    <section class="upload-grid" aria-label="Carga de archivos">
+    <section class="upload-grid upload-grid-single" aria-label="Carga de archivos">
       <article class="upload-card">
         <div class="card-heading">
           <span class="card-number">01</span>
           <div>
-            <h3>Plantilla COMITE</h3>
-            <p>Debe cargarse en cada ejecución.</p>
-          </div>
-        </div>
-
-        <label class="drop-zone" id="templateDrop" for="templateInput">
-          <input id="templateInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-          <span class="upload-icon" aria-hidden="true">↑</span>
-          <strong>Selecciona o arrastra COMITE.xlsx</strong>
-          <small>La plantilla se abre como copia y nunca se sobrescribe.</small>
-        </label>
-        <p class="file-status" id="templateStatus">No se ha cargado una plantilla.</p>
-      </article>
-
-      <article class="upload-card">
-        <div class="card-heading">
-          <span class="card-number">02</span>
-          <div>
             <h3>Archivos de cartera</h3>
-            <p>Un archivo independiente por empresa.</p>
+            <p>Selecciona uno o varios reportes de la misma fecha de corte.</p>
           </div>
           <span class="count-badge" id="fileCountBadge">0</span>
+        </div>
+
+        <div class="repo-template-status">
+          <span class="repo-template-icon">✓</span>
+          <div>
+            <strong>Plantilla COMITE integrada</strong>
+            <small id="templateRepoStatus">Verificando plantilla integrada…</small>
+          </div>
         </div>
 
         <label class="drop-zone" id="sourceDrop" for="sourceInput">
@@ -151,7 +141,7 @@
       <article class="panel table-panel">
         <div class="panel-heading">
           <div>
-            <span class="eyebrow">Valores expresados en miles</span>
+            <span class="eyebrow">Valores en miles, redondeados sin decimales</span>
             <h3>Resumen por empresa</h3>
           </div>
         </div>
@@ -182,13 +172,13 @@
       <div class="privacy-icon" aria-hidden="true">✓</div>
       <div>
         <h3>Privacidad del procesamiento</h3>
-        <p>GitHub Pages publica únicamente el código HTML, CSS y JavaScript. Los archivos Excel seleccionados se leen en la memoria del navegador y no se cargan al repositorio ni se transmiten a un servidor por esta aplicación.</p>
+        <p>GitHub Pages publica únicamente el código HTML, CSS y JavaScript. Los reportes Excel seleccionados se leen en la memoria del navegador. La plantilla integrada es estática y los datos de cartera no se cargan al repositorio ni se transmiten a un servidor.</p>
       </div>
     </section>
   </main>
 
   <footer>
-    <p>Comité de Cartera · Aplicación local-first · Versión 1.2.0</p>
+    <p>Comité de Cartera · Aplicación local-first · Versión 1.4.0</p>
   </footer>
 
   <!-- JSZip permite normalizar celdas vacías incompatibles antes de abrir el Excel. -->

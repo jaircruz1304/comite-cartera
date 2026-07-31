@@ -36,3 +36,5 @@ assert.equal(m.chargedOff.operations, 1);
 assert.equal(m.status, 'OK');
 
 console.log('processor-smoke: OK');
+assert.equal(P.formatMoneyThousands(11207598.62), '11.208');
+assert.equal(P.formatPercent(0.1701), '17%');

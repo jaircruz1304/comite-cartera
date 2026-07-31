@@ -385,3 +385,34 @@ footer { padding: 0 20px 32px; color: var(--slate-500); text-align: center; font
   .button-row, .button { width: 100%; }
   .chart-row { grid-template-columns: 70px 1fr; }
 }
+
+/* v1.4: una sola carga; la plantilla se sirve desde el repositorio. */
+.upload-grid-single {
+  grid-template-columns: minmax(0, 860px);
+  justify-content: center;
+}
+.repo-template-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #bce5d2;
+  border-radius: 12px;
+  background: #f3fbf7;
+}
+.repo-template-status strong,
+.repo-template-status small { display: block; }
+.repo-template-status strong { color: var(--green-700); }
+.repo-template-status small { margin-top: 2px; color: var(--slate-500); }
+.repo-template-icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--green-700);
+  font-weight: 900;
+}
