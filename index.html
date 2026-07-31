@@ -3,111 +3,147 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Procesamiento local de escenarios normal y proyectado para el Comité de Cartera.">
-  <title>Comité de Cartera | Escenarios</title>
+  <meta name="description" content="Procesamiento local de escenarios Normal y Proyectado para el Comité de Cartera CTH.">
+  <title>CTH | Comité de Cartera</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">CC</div>
-        <div>
-          <span class="brand-kicker">CENTRO DE CONTROL FINANCIERO</span>
+  <header class="enterprise-header">
+    <div class="header-inner">
+      <div class="institutional-brand">
+        <div class="logo-frame">
+          <img src="assets/logo_CTH.png" alt="Logo institucional CTH" width="335" height="125">
+        </div>
+        <div class="brand-divider" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <span class="eyebrow">GESTIÓN Y ANÁLISIS FINANCIERO</span>
           <h1>Comité de Cartera</h1>
-          <p>Escenario real, proyección parametrizable y comparación ejecutiva</p>
+          <p>Escenario Normal, proyección parametrizable y comparación ejecutiva</p>
         </div>
       </div>
-      <div class="security-chip"><span></span>Procesamiento local y privado</div>
+      <div class="header-meta">
+        <span class="local-chip"><i></i>Procesamiento local</span>
+        <small>Desarrolladora</small>
+        <strong>Lizbeth Sanipatín</strong>
+      </div>
     </div>
   </header>
 
-  <main class="shell">
-    <section class="executive-hero">
-      <div class="hero-copy">
+  <div class="status-rail" aria-label="Estado de la aplicación">
+    <div class="status-rail-inner">
+      <div class="status-item"><span class="status-dot status-dot-success"></span><strong id="templateRepoStatus">Verificando plantilla…</strong></div>
+      <div class="status-item"><span class="status-dot status-dot-success"></span><strong id="runtimeStatus">Verificando motores…</strong></div>
+      <div class="status-item"><span class="status-dot status-dot-neutral"></span><strong id="lastOutputLabel">Aún no se han generado salidas</strong></div>
+      <div class="status-item status-privacy"><span class="status-dot status-dot-private"></span><strong>Privacidad por diseño</strong></div>
+    </div>
+  </div>
+
+  <main class="app-shell">
+    <section class="page-intro">
+      <div>
         <span class="section-kicker">ANÁLISIS DE ESCENARIOS</span>
-        <h2>Una sola carga, dos lecturas de cartera</h2>
-        <p>El escenario Normal conserva la lógica vigente. El escenario Proyectado incrementa los días de morosidad y aplica la migración parametrizada sin alterar los archivos originales.</p>
+        <h2>Configure, cargue y procese la cartera en un solo flujo</h2>
+        <p>Una carga genera el escenario real, el proyectado y su comparación, sin modificar los archivos originales.</p>
       </div>
-      <div class="system-grid" aria-label="Estado del sistema">
-        <article class="system-card"><span>Plantilla</span><strong id="templateRepoStatus">Verificando…</strong></article>
-        <article class="system-card"><span>Motores</span><strong id="runtimeStatus">Verificando…</strong></article>
-        <article class="system-card"><span>Última salida</span><strong id="lastOutputLabel">Aún no generada</strong></article>
-      </div>
+      <div class="unit-badge"><span>UNIDAD DE PRESENTACIÓN</span><strong>Valores monetarios en miles</strong><small>HTML sin decimales · Excel con precisión contable</small></div>
     </section>
 
-    <section class="workspace-grid">
-      <article class="upload-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="section-kicker">PASO 1</span>
-            <h3>Cargar reportes originales</h3>
-            <p>Selecciona CTH, F12, F8 y F11 correspondientes a una misma fecha base.</p>
-          </div>
-          <div class="count-chip"><span id="fileCountBadge">0</span> archivos</div>
+    <section class="workflow-card parameter-card">
+      <div class="workflow-heading">
+        <div class="step-number">01</div>
+        <div class="heading-copy">
+          <span class="section-kicker">PARAMETRIZACIÓN</span>
+          <h3>Definir escenario Proyectado</h3>
+          <p>Configure los parámetros antes de cargar y procesar los reportes.</p>
         </div>
-
-        <label class="drop-zone" id="sourceDrop" for="sourceInput">
-          <input id="sourceInput" type="file" accept=".xlsx" multiple>
-          <div class="upload-visual" aria-hidden="true"><span>↑</span></div>
-          <strong>Arrastra aquí los reportes o haz clic para seleccionarlos</strong>
-          <small>Los archivos permanecen en la memoria de este navegador.</small>
-        </label>
-        <p class="file-status" id="sourceStatus">Selecciona uno o varios reportes de saldos.</p>
-        <ul class="file-list" id="sourceList"></ul>
-      </article>
-
-      <aside class="operation-panel">
-        <span class="section-kicker">PASO 2</span>
-        <h3>Ejecutar los dos escenarios</h3>
-        <p>El sistema genera dos consolidaciones independientes y una vista comparativa.</p>
-
-        <div class="rule-list">
-          <div><span>01</span><p>Normal: datos originales y reglas vigentes</p></div>
-          <div><span>02</span><p>Proyectado: días + horizonte configurado</p></div>
-          <div><span>03</span><p>Migración solo al superar el umbral</p></div>
-          <div><span>04</span><p>Excel y dashboard separados por escenario</p></div>
-        </div>
-
-        <div class="button-stack">
-          <button class="button button-primary" id="processButton" disabled>Procesar escenarios</button>
-          <div class="download-split">
-            <button class="button button-success" id="downloadNormalButton" disabled>Descargar Normal</button>
-            <button class="button button-projected" id="downloadProjectedButton" disabled>Descargar Proyectado</button>
-          </div>
-          <button class="button button-ghost" id="resetButton">Limpiar sesión</button>
-        </div>
-      </aside>
-    </section>
-
-    <section class="projection-panel">
-      <div class="projection-heading">
-        <div>
-          <span class="section-kicker">PARÁMETROS DE PROYECCIÓN</span>
-          <h3>Configurar escenario Proyectado</h3>
-          <p>Valores de referencia validados: fecha base 23-07-2026, horizonte 8 días y umbral mayor a 60 días.</p>
-        </div>
-        <span class="parameter-status" id="projectionStatus">Pendiente de procesar</span>
+        <span class="parameter-status" id="projectionStatus">Horizonte 8 días · Umbral &gt; 60</span>
       </div>
+
       <div class="parameter-grid">
-        <label><span>Horizonte</span><div class="input-unit"><input id="horizonDays" type="number" min="0" max="365" step="1" value="8"><em>días</em></div></label>
-        <label><span>Umbral de migración</span><div class="input-unit"><input id="thresholdDays" type="number" min="0" max="3650" step="1" value="60"><em>días</em></div></label>
-        <label><span>Fecha base</span><output id="baseDateOutput">Se detectará desde los archivos</output></label>
-        <label><span>Fecha objetivo</span><output id="targetDateOutput">Se calculará automáticamente</output></label>
-        <label class="toggle-field"><input id="reclassifyToggle" type="checkbox" checked><span class="toggle-control"></span><span><strong>Aplicar reclasificación</strong><small>Por Vencer → No Devenga/Vencida al superar el umbral.</small></span></label>
+        <label class="field-card">
+          <span>Horizonte de proyección</span>
+          <div class="input-unit"><input id="horizonDays" type="number" min="0" max="365" step="1" value="8"><em>días</em></div>
+        </label>
+        <label class="field-card">
+          <span>Umbral de migración</span>
+          <div class="input-unit"><input id="thresholdDays" type="number" min="0" max="3650" step="1" value="60"><em>días</em></div>
+        </label>
+        <label class="field-card output-field">
+          <span>Fecha base</span>
+          <output id="baseDateOutput">Se detectará desde los archivos</output>
+        </label>
+        <label class="field-card output-field">
+          <span>Fecha objetivo</span>
+          <output id="targetDateOutput">Se calculará automáticamente</output>
+        </label>
+        <label class="toggle-field">
+          <input id="reclassifyToggle" type="checkbox" checked>
+          <span class="toggle-control" aria-hidden="true"></span>
+          <span><strong>Aplicar reclasificación</strong><small>Reubica operaciones elegibles cuando los días proyectados superan el umbral.</small></span>
+        </label>
       </div>
-      <div class="projection-rule">
-        <strong>Regla parametrizada</strong>
-        <p>Cuando una operación se encuentra únicamente en Cartera Por Vencer y sus días proyectados son mayores al umbral: C → Vencida 1–30; D → ND 1–30; E → ND 31–90; F → ND 91–180; G → ND 181–360.</p>
-      </div>
+
+      <p class="operational-note"><strong>Regla activa:</strong> se incrementan los días de morosidad según el horizonte y solo se reclasifican operaciones que cumplen las condiciones definidas.</p>
     </section>
 
-    <section class="progress-panel" id="progressPanel" hidden>
-      <div class="progress-heading">
-        <div class="spinner" aria-hidden="true"></div>
-        <div><span>PROCESAMIENTO EN CURSO</span><strong id="progressText">Listo para procesar</strong></div>
+    <section class="workflow-card upload-card">
+      <div class="workflow-heading">
+        <div class="step-number">02</div>
+        <div class="heading-copy">
+          <span class="section-kicker">CARGA DE ARCHIVOS</span>
+          <h3>Incorporar reportes originales</h3>
+          <p>Seleccione los archivos de CTH, F12, F8 y F11 correspondientes a la misma fecha base.</p>
+        </div>
+        <div class="count-chip"><span id="fileCountBadge">0</span> archivos</div>
       </div>
-      <ol class="process-steps" id="processSteps"></ol>
+
+      <label class="drop-zone" id="sourceDrop" for="sourceInput">
+        <input id="sourceInput" type="file" accept=".xlsx" multiple>
+        <div class="upload-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14.5v3A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="drop-copy">
+          <strong>Arrastre los reportes aquí o selecciónelos desde su equipo</strong>
+          <small>Formato admitido: .xlsx · Los archivos permanecen en la memoria del navegador.</small>
+        </div>
+        <span class="select-file-button">Seleccionar archivos</span>
+      </label>
+      <p class="file-status" id="sourceStatus">Selecciona uno o varios reportes de saldos.</p>
+      <ul class="file-list" id="sourceList"></ul>
+    </section>
+
+    <section class="workflow-card action-card">
+      <div class="action-grid">
+        <div class="action-column process-column">
+          <div class="workflow-heading compact-heading">
+            <div class="step-number">03</div>
+            <div class="heading-copy"><span class="section-kicker">PROCESAMIENTO</span><h3>Generar ambos escenarios</h3><p>Ejecute el análisis una vez verificados los parámetros y archivos.</p></div>
+          </div>
+          <button class="button button-primary button-large" id="processButton" disabled>
+            <span>Procesar escenarios</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <section class="progress-panel" id="progressPanel" hidden>
+            <div class="spinner" aria-hidden="true"></div>
+            <div><span>Procesamiento en curso</span><strong id="progressText">Preparando análisis…</strong></div>
+          </section>
+          <ol class="process-steps visually-hidden" id="processSteps" aria-hidden="true"></ol>
+        </div>
+
+        <div class="action-divider" aria-hidden="true"></div>
+
+        <div class="action-column download-column">
+          <div class="workflow-heading compact-heading">
+            <div class="step-number">04</div>
+            <div class="heading-copy"><span class="section-kicker">DESCARGAS</span><h3>Obtener resultados</h3><p>Descargue cada consolidado de forma independiente.</p></div>
+          </div>
+          <div class="download-actions">
+            <button class="button button-download" id="downloadNormalButton" disabled><span><strong>Escenario Normal</strong><small>Excel consolidado</small></span><b>↓</b></button>
+            <button class="button button-download projected-download" id="downloadProjectedButton" disabled><span><strong>Escenario Proyectado</strong><small>Excel consolidado</small></span><b>↓</b></button>
+          </div>
+          <button class="button button-text" id="resetButton">Limpiar sesión y comenzar de nuevo</button>
+        </div>
+      </div>
     </section>
 
     <div class="message" id="messageArea" hidden></div>
@@ -143,51 +179,38 @@
           <div class="company-cards" id="companyCards"></div>
         </section>
 
-        <section class="dashboard-grid">
-          <article class="dashboard-section table-section">
-            <div class="section-heading"><div><span class="section-kicker">MATRIZ DE CONTROL</span><h3>Detalle del escenario</h3></div></div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Empresa</th><th>Total cartera</th><th>Operaciones</th><th>Vencida</th><th>No Devenga</th><th>ND 60–90</th><th>ND +90</th><th>Castigada</th><th>Estado</th></tr></thead>
-                <tbody id="summaryTableBody"><tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr></tbody>
-              </table>
-            </div>
-          </article>
-
-          <article class="dashboard-section validation-section">
-            <div class="section-heading"><div><span class="section-kicker">AUDITORÍA</span><h3>Validaciones y alertas</h3></div></div>
-            <ul class="validation-list" id="validationList"><li class="validation-info"><span></span>La validación aparecerá al finalizar.</li></ul>
-          </article>
+        <section class="dashboard-section table-section full-width-table">
+          <div class="section-heading"><div><span class="section-kicker">MATRIZ DE CONTROL</span><h3>Detalle del escenario</h3></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Empresa</th><th>Total cartera</th><th>Operaciones</th><th>Vencida</th><th>No Devenga</th><th>ND 60–90</th><th>ND +90</th><th>Castigada</th><th>Estado</th></tr></thead>
+              <tbody id="summaryTableBody"><tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr></tbody>
+            </table>
+          </div>
         </section>
       </div>
 
       <div id="comparisonDashboard" hidden>
         <div class="comparison-kpis" id="comparisonKpis"></div>
-        <section class="dashboard-grid comparison-grid">
-          <article class="dashboard-section table-section">
-            <div class="section-heading"><div><span class="section-kicker">VARIACIÓN POR EMPRESA</span><h3>Normal frente a Proyectado</h3></div></div>
-            <div class="table-wrap">
-              <table class="comparison-table">
-                <thead><tr><th>Empresa</th><th>Total Normal</th><th>Total Proyectado</th><th>Δ Vencida</th><th>Δ No Devenga</th><th>Δ ND 60–90</th><th>Δ ND +90</th><th>Reclasificadas</th></tr></thead>
-                <tbody id="comparisonTableBody"></tbody>
-              </table>
-            </div>
-          </article>
-          <article class="dashboard-section validation-section">
-            <div class="section-heading"><div><span class="section-kicker">TRAZABILIDAD DE PROYECCIÓN</span><h3>Parámetros y migraciones</h3></div></div>
-            <ul class="validation-list" id="projectionAuditList"></ul>
-          </article>
+        <section class="dashboard-section table-section full-width-table">
+          <div class="section-heading"><div><span class="section-kicker">VARIACIÓN POR EMPRESA</span><h3>Normal frente a Proyectado</h3></div></div>
+          <div class="table-wrap">
+            <table class="comparison-table">
+              <thead><tr><th>Empresa</th><th>Total Normal</th><th>Total Proyectado</th><th>Δ Vencida</th><th>Δ No Devenga</th><th>Δ ND 60–90</th><th>Δ ND +90</th><th>Reclasificadas</th></tr></thead>
+              <tbody id="comparisonTableBody"></tbody>
+            </table>
+          </div>
         </section>
       </div>
     </section>
 
-    <section class="privacy-note">
-      <div class="privacy-shield" aria-hidden="true">✓</div>
-      <div><strong>Privacidad por diseño</strong><p>Los archivos se procesan en la memoria del navegador. Los reportes no se cargan al repositorio ni se transmiten a un servidor.</p></div>
-    </section>
+    <p class="privacy-line"><strong>Privacidad por diseño:</strong> Los archivos se procesan localmente en la memoria del navegador y no se transmiten a servidores externos.</p>
   </main>
 
-  <footer><span>Comité de Cartera</span><span>Versión 1.6.0 · Escenarios Normal y Proyectado</span></footer>
+  <footer class="enterprise-footer">
+    <div><strong>CTH · Comité de Cartera</strong><span>Versión 1.7.0 · Escenarios Normal y Proyectado</span></div>
+    <div><span>Desarrolladora</span><strong>Lizbeth Sanipatín</strong></div>
+  </footer>
 
   <script src="vendor/jszip.min.js"></script>
   <script src="js/processor.js"></script>

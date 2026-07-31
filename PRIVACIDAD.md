@@ -1,21 +1,24 @@
 # Privacidad y seguridad
 
-## Procesamiento local
+## Privacidad por diseño
 
-Los archivos Excel se seleccionan mediante el navegador y se procesan en memoria. La aplicación no contiene llamadas `fetch`, formularios de envío ni conexiones a una API para transmitir los archivos.
+Los archivos de cartera se procesan localmente en la memoria del navegador y no se transmiten a servidores externos.
+
+La aplicación únicamente descarga desde el propio repositorio sus recursos estáticos: código, estilos, logo institucional y la plantilla base `COMITE_BASE.xlsx`. Los reportes seleccionados por el usuario no se envían mediante formularios, API, analítica o servicios de terceros.
 
 ## Repositorio
 
-El repositorio debe contener únicamente código. No se deben publicar archivos reales de cartera, plantillas con información financiera, resultados consolidados ni credenciales.
+El repositorio debe contener únicamente el código de la aplicación, sus recursos estáticos y la plantilla base autorizada. No se deben publicar:
 
-## Acceso al sitio
-
-GitHub Pages puede ser públicamente accesible según el plan y la configuración del repositorio. Que el código sea público no implica que los archivos procesados se publiquen: los archivos solo se incorporan cuando el usuario los selecciona localmente.
+- Reportes reales de cartera.
+- Consolidaciones generadas.
+- Credenciales.
+- Información financiera confidencial.
 
 ## Recomendaciones institucionales
 
 - Utilizar equipos autorizados.
 - Verificar que la URL corresponda al repositorio oficial.
 - Cerrar o recargar la página al terminar para liberar la sesión.
-- Guardar los archivos resultantes únicamente en ubicaciones institucionales autorizadas.
-- No incorporar analítica web, rastreadores ni librerías adicionales sin revisión de seguridad.
+- Guardar los resultados únicamente en ubicaciones institucionales autorizadas.
+- No incorporar rastreadores, analítica web ni librerías externas sin revisión de seguridad.

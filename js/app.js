@@ -24,12 +24,10 @@
 
   const els = {};
   const steps = [
-    { at: 8, label: 'Validar archivos' },
-    { at: 28, label: 'Calcular Normal' },
-    { at: 48, label: 'Calcular Proyectado' },
-    { at: 70, label: 'Construir Excel Normal' },
-    { at: 88, label: 'Construir Excel Proyectado' },
-    { at: 100, label: 'Validar salidas' }
+    { at: 8, label: 'Preparar' },
+    { at: 48, label: 'Analizar' },
+    { at: 88, label: 'Generar' },
+    { at: 100, label: 'Finalizar' }
   ];
 
   document.addEventListener('DOMContentLoaded', init);
@@ -50,12 +48,12 @@
       'sourceInput', 'sourceDrop', 'sourceStatus', 'sourceList', 'processButton',
       'downloadNormalButton', 'downloadProjectedButton', 'resetButton', 'progressPanel',
       'progressText', 'processSteps', 'messageArea', 'dashboard', 'companyFilter',
-      'companyFilterLabel', 'summaryTableBody', 'validationList', 'companyCards',
+      'companyFilterLabel', 'summaryTableBody', 'companyCards',
       'cutDateLabel', 'dateChipLabel', 'fileCountBadge', 'templateRepoStatus',
       'runtimeStatus', 'lastOutputLabel', 'horizonDays', 'thresholdDays',
       'reclassifyToggle', 'baseDateOutput', 'targetDateOutput', 'projectionStatus',
       'dashboardScenarioTitle', 'dashboardScenarioDescription', 'scenarioDashboard',
-      'comparisonDashboard', 'comparisonKpis', 'comparisonTableBody', 'projectionAuditList'
+      'comparisonDashboard', 'comparisonKpis', 'comparisonTableBody'
     ].forEach((id) => { els[id] = document.getElementById(id); });
   }
 
@@ -92,8 +90,9 @@
     if (!R) missing.push('motor de proyección');
     if (!X) missing.push('motor OOXML');
     if (missing.length) {
-      els.runtimeStatus.textContent = `No disponible: ${missing.join(', ')}`;
-      showMessage('error', `No se cargaron componentes requeridos: ${missing.join(', ')}. Presiona Ctrl+F5.`);
+      els.runtimeStatus.textContent = 'Requiere actualización';
+      console.error('Componentes no disponibles:', missing);
+      showMessage('error', 'La aplicación no pudo iniciar correctamente. Actualiza la página con Ctrl+F5.');
     } else {
       els.runtimeStatus.textContent = 'Motores locales listos';
     }
@@ -113,7 +112,8 @@
       els.templateRepoStatus.textContent = 'Plantilla integrada validada';
     } catch (error) {
       els.templateRepoStatus.textContent = 'Plantilla no disponible';
-      showMessage('error', `No se pudo validar la plantilla integrada: ${error.message || error}`);
+      console.error('Error al validar la plantilla integrada:', error);
+      showMessage('error', 'No fue posible preparar la plantilla integrada. Actualiza la página e inténtalo nuevamente.');
     }
     updateFilesUI();
   }
@@ -236,13 +236,13 @@
     state.selectedCompany = 'ALL';
 
     try {
-      updateProgress(8, 'Validando archivos seleccionados');
+      updateProgress(8, 'Preparando los archivos seleccionados');
       enforceFileLimits();
 
       const normalAnalyses = [];
       for (let index = 0; index < state.sourceFiles.length; index += 1) {
         const file = state.sourceFiles[index];
-        updateProgress(16 + Math.round(((index + 1) / state.sourceFiles.length) * 22), `Calculando escenario Normal: ${file.name}`);
+        updateProgress(16 + Math.round(((index + 1) / state.sourceFiles.length) * 22), `Analizando ${index + 1} de ${state.sourceFiles.length} reportes`);
         await yieldToBrowser();
         const values = await readSourceMatrix(file);
         const analysis = P.analyzeValues(values, file.name);
@@ -258,11 +258,11 @@
       const params = readProjectionParams();
       const targetDate = R.addDays(baseDate, params.horizonDays);
 
-      updateProgress(48, 'Aplicando la lógica parametrizada de proyección');
+      updateProgress(48, 'Generando los escenarios Normal y Proyectado');
       const projectedAnalyses = normalAnalyses.map((analysis) => R.projectAnalysis(analysis, params));
       projectedAnalyses.sort((a, b) => companyOrder(a.company.code) - companyOrder(b.company.code));
 
-      updateProgress(70, 'Construyendo Excel del escenario Normal');
+      updateProgress(70, 'Preparando el archivo del escenario Normal');
       const normalGenerated = await withTimeout(
         X.build(state.templateBuffer, normalAnalyses, {
           templateRows: P.TEMPLATE_ROWS,
@@ -274,7 +274,7 @@
         'La construcción del Excel Normal superó 90 segundos.'
       );
 
-      updateProgress(88, 'Construyendo Excel del escenario Proyectado');
+      updateProgress(88, 'Preparando el archivo del escenario Proyectado');
       const projectedGenerated = await withTimeout(
         X.build(state.templateBuffer, projectedAnalyses, {
           templateRows: P.TEMPLATE_ROWS,
@@ -286,7 +286,7 @@
         'La construcción del Excel Proyectado superó 90 segundos.'
       );
 
-      updateProgress(96, 'Verificando integridad de ambos archivos');
+      updateProgress(96, 'Finalizando los archivos de descarga');
       const normalBuffer = toStandaloneArrayBuffer(normalGenerated);
       const projectedBuffer = toStandaloneArrayBuffer(projectedGenerated);
       const requiredSheets = (analyses) => [
@@ -306,14 +306,14 @@
       state.targetDate = targetDate;
       state.projectionParams = params;
 
-      updateProgress(100, 'Escenarios validados y listos para descargar');
+      updateProgress(100, 'Resultados listos para descargar');
       updateProjectionOutputs();
       renderDashboard();
       const reclassified = projectedAnalyses.reduce((sum, item) => sum + item.projection.reclassifiedOperations, 0);
       showMessage('success', `Proceso completado. Se generaron los escenarios Normal y Proyectado; ${formatInteger(reclassified)} operaciones fueron reclasificadas en la proyección.`);
     } catch (error) {
       console.error(error);
-      showMessage('error', error && error.message ? error.message : 'Ocurrió un error inesperado.');
+      showMessage('error', userFriendlyError(error));
       renderEmptyDashboard();
     } finally {
       setBusy(false);
@@ -325,7 +325,8 @@
     try {
       return await X.readFirstSheet(await file.arrayBuffer());
     } catch (error) {
-      throw new Error(`No se pudo leer ${file.name}: ${error.message || error}`);
+      console.error(`No se pudo leer ${file.name}:`, error);
+      throw new Error(`No se pudo leer el archivo ${file.name}. Verifica que sea un reporte Excel válido.`);
     }
   }
 
@@ -386,7 +387,6 @@
     renderKpis(filtered, projected);
     renderCompanyCards(filtered, projected);
     renderSummaryTable(filtered);
-    renderValidations(filtered, projected);
   }
 
   function renderCompanyFilter() {
@@ -457,22 +457,6 @@
       <tr><td><strong>${metrics.company}</strong></td><td class="number">${P.formatMoneyThousands(metrics.total.value)}</td><td class="number">${formatInteger(metrics.total.operations)}</td><td class="number">${P.formatMoneyThousands(metrics.overdue.value)}</td><td class="number">${P.formatMoneyThousands(metrics.noDevenga.value)}</td><td class="number">${P.formatMoneyThousands(metrics.noDevenga6090.value)}</td><td class="number">${P.formatMoneyThousands(metrics.noDevengaOver90.value)}</td><td class="number">${P.formatMoneyThousands(metrics.chargedOff.value)}</td><td><span class="status-pill ${metrics.status === 'OK' ? 'ok' : 'review'}">${metrics.status}</span></td></tr>`).join('');
   }
 
-  function renderValidations(analyses, projected) {
-    const items = [];
-    analyses.forEach(({ metrics, projection }) => {
-      items.push({ type: 'ok', text: `${metrics.company}: ${formatInteger(metrics.detailRows)} filas de detalle validadas; totales y subtotales excluidos.` });
-      items.push({ type: metrics.duplicatesExcluded ? 'warning' : 'ok', text: `${metrics.company}: ${formatInteger(metrics.duplicatesExcluded)} duplicados exactos excluidos.` });
-      items.push({ type: 'ok', text: `${metrics.company}: No Devenga se calculó únicamente desde sus columnas específicas.` });
-      if (projected) {
-        items.push({ type: 'info', text: `${metrics.company}: ${formatInteger(projection.reclassifiedOperations)} operaciones migraron al superar > ${projection.thresholdDays} días.` });
-      }
-      items.push({ type: metrics.chargedOff.value == null ? 'info' : 'ok', text: metrics.chargedOff.value == null
-        ? `${metrics.company}: Cartera Castigada permanece en blanco.`
-        : `${metrics.company}: ${formatInteger(metrics.chargedOff.operations)} operaciones castigadas separadas de la cartera activa.` });
-      metrics.warnings.forEach((warning) => items.push({ type: 'warning', text: `${metrics.company}: ${warning}` }));
-    });
-    els.validationList.innerHTML = items.map((item) => `<li class="validation-${item.type}"><span></span>${escapeHtml(item.text)}</li>`).join('');
-  }
 
   function renderComparison() {
     const pairs = comparisonPairs();
@@ -497,17 +481,7 @@
       return `<tr><td><strong>${item.company}</strong></td><td class="number">${P.formatMoneyThousands(n.total.value)}</td><td class="number">${P.formatMoneyThousands(p.total.value)}</td><td class="number delta-positive">${formatSignedThousands(p.overdue.value - n.overdue.value)}</td><td class="number delta-positive">${formatSignedThousands(p.noDevenga.value - n.noDevenga.value)}</td><td class="number">${formatSignedThousands(p.noDevenga6090.value - n.noDevenga6090.value)}</td><td class="number">${formatSignedThousands(p.noDevengaOver90.value - n.noDevengaOver90.value)}</td><td class="number">${formatInteger(item.projected.projection.reclassifiedOperations)}</td></tr>`;
     }).join('');
 
-    const params = state.projectionParams;
-    const totalReclassified = filtered.reduce((sum, item) => sum + item.projected.projection.reclassifiedOperations, 0);
-    els.projectionAuditList.innerHTML = [
-      `Fecha base: ${formatDate(state.baseDate)}.`,
-      `Fecha objetivo: ${formatDate(state.targetDate)}.`,
-      `Horizonte aplicado: ${params.horizonDays} días.`,
-      `Umbral: días proyectados mayores a ${params.thresholdDays}.`,
-      `Reclasificación: ${params.reclassify ? 'activada' : 'desactivada'}.`,
-      `${formatInteger(totalReclassified)} operaciones reclasificadas en la selección actual.`,
-      `El Total Cartera permanece sin variación; la proyección modifica la distribución entre Por Vencer, No Devenga y Vencida.`
-    ].map((text, index) => `<li class="validation-${index < 5 ? 'info' : 'ok'}"><span></span>${escapeHtml(text)}</li>`).join('');
+
   }
 
   function comparisonPairs() {
@@ -521,10 +495,8 @@
     document.getElementById('kpiGrid').innerHTML = '';
     els.companyCards.innerHTML = '<div class="empty-state"><strong>Sin resultados</strong><span>Carga los reportes originales y ejecuta ambos escenarios.</span></div>';
     els.summaryTableBody.innerHTML = '<tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr>';
-    els.validationList.innerHTML = '<li class="validation-info"><span></span>La validación aparecerá al finalizar el procesamiento.</li>';
     els.comparisonKpis.innerHTML = '';
     els.comparisonTableBody.innerHTML = '';
-    els.projectionAuditList.innerHTML = '';
   }
 
   function renderProcessSteps(percent) {
@@ -630,6 +602,17 @@
     const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
     const value = bytes / (1024 ** index);
     return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  }
+
+
+  function userFriendlyError(error) {
+    const message = String(error && error.message ? error.message : '');
+    if (/misma fecha|fecha de corte/i.test(message)) return 'Los reportes deben corresponder a una misma fecha de corte.';
+    if (/duplicad|empresa/i.test(message)) return message;
+    if (/límite|tamaño|archivo/i.test(message)) return message;
+    if (/90 segundos|superó/i.test(message)) return 'El procesamiento tardó más de lo esperado. Reduce el número de archivos o vuelve a intentarlo.';
+    if (/xlsx|excel|plantilla|paquete/i.test(message)) return 'No fue posible generar el archivo Excel. Verifica los reportes cargados y vuelve a intentarlo.';
+    return 'No se pudo completar el procesamiento. Revisa los archivos y vuelve a intentarlo.';
   }
 
   function showMessage(type, text) {
