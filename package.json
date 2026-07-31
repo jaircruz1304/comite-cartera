@@ -1,9 +1,9 @@
 {
   "name": "comite-cartera-github-pages",
-  "version": "1.9.0",
+  "version": "1.7.1",
   "private": true,
-  "description": "Procesador CTH con modalidades local y Google Drive, escenarios Normal/Proyectado, Excel estándar y PDF Enterprise nativo.",
+  "description": "Procesador local CTH de escenarios Normal y Proyectado con interfaz ejecutiva.",
   "scripts": {
-    "test": "node tests/processor-smoke.js && node tests/projection-smoke.js && node tests/ooxml-smoke.js && node tests/drive-smoke.js && node tests/pdf-smoke.js && node tests/repository-smoke.js"
+    "test": "node tests/processor-smoke.js && node tests/projection-smoke.js && node tests/ooxml-smoke.js && node tests/repository-smoke.js"
   }
 }

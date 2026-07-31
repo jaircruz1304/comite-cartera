@@ -1,27 +1,24 @@
-# Privacidad y tratamiento de archivos
+# Privacidad y seguridad
 
-## Procesamiento local
+## Privacidad por diseño
 
-Los archivos seleccionados se leen en la memoria del navegador. No se cargan a GitHub ni a un servidor de la aplicación.
+Los archivos de cartera se procesan localmente en la memoria del navegador y no se transmiten a servidores externos.
 
-## Procesamiento desde Google Drive
+La aplicación únicamente descarga desde el propio repositorio sus recursos estáticos: código, estilos, logo institucional y la plantilla base `COMITE_BASE.xlsx`. Los reportes seleccionados por el usuario no se envían mediante formularios, API, analítica o servicios de terceros.
 
-El usuario autoriza temporalmente acceso de solo lectura mediante Google Identity Services. Los archivos seleccionados se descargan directamente desde Google Drive a la memoria del navegador y se procesan con el mismo motor local.
+## Repositorio
 
-La aplicación:
+El repositorio debe contener únicamente el código de la aplicación, sus recursos estáticos y la plantilla base autorizada. No se deben publicar:
 
-- No almacena tokens OAuth en el repositorio.
-- No utiliza secretos de cliente.
-- No solicita permisos de escritura en Drive.
-- No guarda reportes en servidores propios.
-- No incorpora los archivos de cartera al repositorio de GitHub.
+- Reportes reales de cartera.
+- Consolidaciones generadas.
+- Credenciales.
+- Información financiera confidencial.
 
-El token de acceso es temporal y se mantiene solo durante la sesión activa de la página.
+## Recomendaciones institucionales
 
-## PDF y Excel
-
-Los Excel estándar y PDF Enterprise se generan en el navegador. La versión PDF es nativa y no se crea un archivo HTML intermedio.
-
-## Responsabilidad institucional
-
-El administrador debe configurar la aplicación OAuth, restringir su audiencia, revisar los permisos solicitados y asegurar que únicamente usuarios autorizados accedan a la carpeta de reportes.
+- Utilizar equipos autorizados.
+- Verificar que la URL corresponda al repositorio oficial.
+- Cerrar o recargar la página al terminar para liberar la sesión.
+- Guardar los resultados únicamente en ubicaciones institucionales autorizadas.
+- No incorporar rastreadores, analítica web ni librerías externas sin revisión de seguridad.
