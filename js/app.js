@@ -516,11 +516,15 @@
   function setBusy(isBusy) {
     document.body.classList.toggle('is-busy', isBusy);
     els.progressPanel.hidden = !isBusy;
+    els.progressPanel.style.display = isBusy ? 'flex' : 'none';
+    els.progressPanel.setAttribute('aria-hidden', String(!isBusy));
+    els.processButton.setAttribute('aria-busy', String(isBusy));
     const runtimeReady = Boolean(window.JSZip && P && R && X);
     els.processButton.disabled = isBusy || !(state.templateReady && state.sourceFiles.length && runtimeReady);
     els.resetButton.disabled = isBusy;
     els.downloadNormalButton.disabled = isBusy || !state.normalOutputBlob;
     els.downloadProjectedButton.disabled = isBusy || !state.projectedOutputBlob;
+    if (!isBusy) renderProcessSteps(0);
   }
 
   function downloadBlob(blob, name) {

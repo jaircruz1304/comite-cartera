@@ -1,6 +1,12 @@
-# CTH · Comité de Cartera — Versión 1.7
+# CTH · Comité de Cartera — Versión 1.7.1
 
 Aplicación web local para procesar reportes `SaldosDeCarteraSencillo_Report.xlsx`, generar los escenarios **Normal** y **Proyectado**, comparar resultados y descargar dos consolidaciones Excel independientes.
+
+## Corrección V1.7.1
+
+- El indicador de procesamiento permanece oculto antes de iniciar.
+- El spinner se detiene y desaparece al finalizar, tanto en éxito como en error.
+- Se reforzó el control con `hidden`, `display` y atributos de accesibilidad para evitar que estilos del navegador mantengan visible el indicador.
 
 ## Flujo operativo
 

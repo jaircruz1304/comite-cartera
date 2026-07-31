@@ -307,6 +307,8 @@ button:disabled { cursor: not-allowed; }
 .projected-download b { background: #5557a6; }
 .button-text { margin-top: 10px; padding: 8px 2px; background: transparent; color: var(--slate-500); font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
 .progress-panel { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 11px 13px; border: 1px solid #dce6ee; border-radius: 10px; background: #f7fafc; }
+.progress-panel[hidden] { display: none !important; }
+.progress-panel[hidden] .spinner { animation: none; }
 .progress-panel span, .progress-panel strong { display: block; }
 .progress-panel span { color: var(--slate-500); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .progress-panel strong { margin-top: 2px; color: var(--navy-800); font-size: 12px; }

@@ -1,6 +1,6 @@
 {
   "name": "comite-cartera-github-pages",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "description": "Procesador local CTH de escenarios Normal y Proyectado con interfaz ejecutiva.",
   "scripts": {
