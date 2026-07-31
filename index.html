@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Procesamiento local de reportes del Comité de Cartera desde archivos Excel.">
   <meta name="theme-color" content="#16324f">
-  <title>Comité de Cartera | Procesador Excel</title>
+  <title>Comité de Cartera | Procesador Excel v1.3</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -200,6 +200,13 @@
   </script>
 
   <!-- Motor Excel: CDN principal + respaldo. Sin SRI para evitar bloqueos por hash o proxy corporativo. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    if (!window.XLSX) {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-populate/1.21.0/xlsx-populate-no-encryption.min.js"></script>
   <script>
     if (!window.XlsxPopulate) {

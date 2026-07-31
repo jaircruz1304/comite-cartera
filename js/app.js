@@ -51,13 +51,18 @@
   }
 
   function checkRuntime() {
+    if (!window.XLSX) {
+      showMessage('error', 'No se cargó el lector rápido de Excel (SheetJS). La red puede estar bloqueando los CDN. Recarga con Ctrl+F5.');
+      els.processButton.disabled = true;
+      return;
+    }
     if (!window.XlsxPopulate) {
-      showMessage('error', 'No se cargó el motor de Excel (XlsxPopulate). La red puede estar bloqueando los CDN. Recarga con Ctrl+F5; si continúa, revisa la consola del navegador.');
+      showMessage('error', 'No se cargó el generador de Excel (XlsxPopulate). La red puede estar bloqueando los CDN. Recarga con Ctrl+F5.');
       els.processButton.disabled = true;
       return;
     }
     if (!window.JSZip) {
-      showMessage('error', 'No se cargó el componente de compatibilidad Excel (JSZip). Recarga con Ctrl+F5 o revisa si la red bloquea los CDN.');
+      showMessage('error', 'No se cargó el componente de compatibilidad Excel (JSZip). Recarga con Ctrl+F5.');
       els.processButton.disabled = true;
       return;
     }
@@ -157,7 +162,7 @@
       els.sourceList.appendChild(item);
     });
 
-    els.processButton.disabled = !(state.templateFile && state.sourceFiles.length && window.XlsxPopulate && window.JSZip && P);
+    els.processButton.disabled = !(state.templateFile && state.sourceFiles.length && window.XLSX && window.XlsxPopulate && window.JSZip && P);
     els.downloadButton.disabled = !state.outputBlob;
   }
 
@@ -174,23 +179,20 @@
       updateProgress(4, 'Validando archivos seleccionados…');
       enforceFileLimits();
 
-      updateProgress(10, 'Abriendo una copia limpia de la plantilla COMITE…');
-      const reportWorkbook = await openWorkbookSafely(state.templateFile, 'la plantilla COMITE');
+      updateProgress(10, 'Preparando una copia liviana de la plantilla COMITE…');
+      const reportWorkbook = await openTemplateWorkbook(state.templateFile);
       validateTemplateWorkbook(reportWorkbook);
       prepareFreshTemplate(reportWorkbook);
 
       const analyses = [];
       for (let index = 0; index < state.sourceFiles.length; index += 1) {
         const file = state.sourceFiles[index];
-        const start = 18;
-        const span = 46;
-        updateProgress(start + Math.round((index / state.sourceFiles.length) * span), `Analizando ${file.name}…`);
+        const start = 20;
+        const span = 44;
+        updateProgress(start + Math.round((index / state.sourceFiles.length) * span), `Leyendo y analizando ${file.name}…`);
+        await yieldToBrowser();
 
-        const sourceWorkbook = await openWorkbookSafely(file, `el archivo ${file.name}`);
-        const sourceSheet = sourceWorkbook.sheet(0);
-        if (!sourceSheet) throw new Error(`El archivo ${file.name} no contiene hojas.`);
-        const usedRange = sourceSheet.usedRange();
-        const values = usedRange ? normalizeMatrix(usedRange.value()) : [];
+        const values = await readSourceMatrix(file);
         const analysis = P.analyzeValues(values, file.name);
         analysis.sourceValues = values;
         analyses.push(analysis);
@@ -209,7 +211,7 @@
       addControlSheet(reportWorkbook, analyses);
 
       updateProgress(92, 'Generando el archivo Excel consolidado…');
-      state.outputBlob = await reportWorkbook.outputAsync();
+      state.outputBlob = await withTimeout(reportWorkbook.outputAsync(), 60000, 'La generación del Excel superó 60 segundos. Cierra otras pestañas y vuelve a intentar.');
       state.outputName = `COMITE_Consolidado_${P.fileDateKey(analyses[0].metrics.cutDate)}_FINAL.xlsx`;
       state.analyses = analyses;
 
@@ -226,70 +228,181 @@
     }
   }
 
-  async function openWorkbookSafely(file, label) {
-    try {
-      return await XlsxPopulate.fromDataAsync(file);
-    } catch (initialError) {
-      const message = String(initialError && initialError.message ? initialError.message : initialError);
-      const isXmlCellError = /children|_parseNode|Cannot read propert/i.test(message);
-      if (!isXmlCellError || !window.JSZip) {
-        throw new Error(`No se pudo abrir ${label}: ${message}`);
-      }
+  async function openTemplateWorkbook(file) {
+    const prepared = await prepareTemplatePackage(file);
+    updateProgress(14, `Plantilla optimizada: ${prepared.removedSheets} hoja(s) histórica(s) omitida(s) y ${prepared.normalizedCells} celda(s) normalizada(s).`);
+    await yieldToBrowser();
 
-      updateProgress(12, `Corrigiendo compatibilidad interna de ${label}…`);
-      const sanitized = await sanitizeWorkbookForPopulate(file);
-      try {
-        return await XlsxPopulate.fromDataAsync(sanitized.blob);
-      } catch (retryError) {
-        const retryMessage = String(retryError && retryError.message ? retryError.message : retryError);
-        throw new Error(`No se pudo abrir ${label}, incluso después de normalizar ${sanitized.changes} celda(s) vacía(s): ${retryMessage}`);
-      }
+    try {
+      return await withTimeout(
+        XlsxPopulate.fromDataAsync(prepared.arrayBuffer),
+        30000,
+        'La plantilla tardó demasiado en abrirse. Recarga la página y vuelve a intentarlo.'
+      );
+    } catch (error) {
+      const message = String(error && error.message ? error.message : error);
+      throw new Error(`No se pudo abrir la copia limpia de la plantilla: ${message}`);
     }
   }
 
-  async function sanitizeWorkbookForPopulate(file) {
+  async function prepareTemplatePackage(file) {
     const input = await file.arrayBuffer();
     const zip = await JSZip.loadAsync(input);
-    const worksheetNames = Object.keys(zip.files).filter((name) => /^xl\/worksheets\/sheet[^/]*\.xml$/i.test(name));
-    let changes = 0;
+    const parser = new DOMParser();
+    const serializer = new XMLSerializer();
+    const workbookPath = 'xl/workbook.xml';
+    const relsPath = 'xl/_rels/workbook.xml.rels';
+    const contentTypesPath = '[Content_Types].xml';
 
+    const workbookEntry = zip.file(workbookPath);
+    const relsEntry = zip.file(relsPath);
+    const contentTypesEntry = zip.file(contentTypesPath);
+    if (!workbookEntry || !relsEntry || !contentTypesEntry) {
+      throw new Error('La plantilla no tiene una estructura XLSX válida.');
+    }
+
+    const workbookDoc = parser.parseFromString(await workbookEntry.async('string'), 'application/xml');
+    const relsDoc = parser.parseFromString(await relsEntry.async('string'), 'application/xml');
+    const contentTypesDoc = parser.parseFromString(await contentTypesEntry.async('string'), 'application/xml');
+    assertXmlDocument(workbookDoc, 'xl/workbook.xml');
+    assertXmlDocument(relsDoc, 'xl/_rels/workbook.xml.rels');
+    assertXmlDocument(contentTypesDoc, '[Content_Types].xml');
+
+    const relationshipById = new Map();
+    [...relsDoc.getElementsByTagNameNS('*', 'Relationship')].forEach((node) => {
+      relationshipById.set(node.getAttribute('Id'), node);
+    });
+
+    const removableSheets = [...workbookDoc.getElementsByTagNameNS('*', 'sheet')].filter((sheet) => {
+      const name = String(sheet.getAttribute('name') || '').toUpperCase();
+      return name.startsWith('ORIGEN_') || name === 'CONTROL_EJECUCION';
+    });
+
+    const removedParts = new Set();
+    removableSheets.forEach((sheet) => {
+      const relationId = sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id')
+        || sheet.getAttribute('r:id');
+      const relationship = relationshipById.get(relationId);
+      if (relationship) {
+        const target = relationship.getAttribute('Target') || '';
+        const normalizedPart = normalizeZipPart(target);
+        if (normalizedPart) {
+          removedParts.add(normalizedPart);
+          zip.remove(normalizedPart);
+          const sheetRels = normalizedPart.replace('xl/worksheets/', 'xl/worksheets/_rels/') + '.rels';
+          zip.remove(sheetRels);
+        }
+        relationship.parentNode.removeChild(relationship);
+      }
+      sheet.parentNode.removeChild(sheet);
+    });
+
+    [...contentTypesDoc.getElementsByTagNameNS('*', 'Override')].forEach((node) => {
+      const partName = String(node.getAttribute('PartName') || '').replace(/^\//, '');
+      if (removedParts.has(partName)) node.parentNode.removeChild(node);
+    });
+
+    zip.file(workbookPath, serializer.serializeToString(workbookDoc));
+    zip.file(relsPath, serializer.serializeToString(relsDoc));
+    zip.file(contentTypesPath, serializer.serializeToString(contentTypesDoc));
+
+    const worksheetNames = Object.keys(zip.files).filter((name) => /^xl\/worksheets\/sheet[^/]*\.xml$/i.test(name));
+    let normalizedCells = 0;
     for (const name of worksheetNames) {
       const entry = zip.file(name);
       if (!entry) continue;
       const xml = await entry.async('string');
-      let normalized = xml;
-
-      // Excel puede guardar celdas vacías como inlineStr sin nodo <is>.
-      // xlsx-populate 1.21.0 intenta leer un hijo inexistente y produce
-      // “Cannot read properties of undefined (reading children)”.
-      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)\/>/g, (match, before, after) => {
-        changes += 1;
-        return `<c${before}${after}/>`;
-      });
-      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<\/c>/g, (match, before, after) => {
-        changes += 1;
-        return `<c${before}${after}/>`;
-      });
-      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is\s*\/>\s*<\/c>/g, (match, before, after) => {
-        changes += 1;
-        return `<c${before}${after}/>`;
-      });
-      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is>\s*<\/is>\s*<\/c>/g, (match, before, after) => {
-        changes += 1;
-        return `<c${before}${after}/>`;
-      });
-
-      if (normalized !== xml) zip.file(name, normalized);
+      const result = normalizeEmptyInlineStrings(xml);
+      normalizedCells += result.changes;
+      if (result.xml !== xml) zip.file(name, result.xml);
     }
 
-    const blob = await zip.generateAsync({
-      type: 'blob',
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    const arrayBuffer = await zip.generateAsync({
+      type: 'arraybuffer',
       compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
+      compressionOptions: { level: 3 }
     });
 
-    return { blob, changes };
+    return {
+      arrayBuffer,
+      removedSheets: removableSheets.length,
+      normalizedCells
+    };
+  }
+
+  async function readSourceMatrix(file) {
+    const input = await file.arrayBuffer();
+    let workbook;
+    try {
+      workbook = XLSX.read(input, {
+        type: 'array',
+        cellDates: true,
+        cellFormula: false,
+        cellHTML: false,
+        cellNF: false,
+        cellStyles: false,
+        dense: false
+      });
+    } catch (error) {
+      const message = String(error && error.message ? error.message : error);
+      throw new Error(`No se pudo leer ${file.name}: ${message}`);
+    }
+
+    const firstSheetName = workbook.SheetNames && workbook.SheetNames[0];
+    if (!firstSheetName) throw new Error(`El archivo ${file.name} no contiene hojas.`);
+    const worksheet = workbook.Sheets[firstSheetName];
+    const values = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      raw: true,
+      defval: null,
+      blankrows: true
+    });
+    return normalizeMatrix(values);
+  }
+
+  function normalizeEmptyInlineStrings(xml) {
+    let changes = 0;
+    let normalized = xml;
+    const patterns = [
+      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)\/>/g,
+      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<\/c>/g,
+      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is\s*\/>\s*<\/c>/g,
+      /<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is>\s*<\/is>\s*<\/c>/g
+    ];
+    patterns.forEach((pattern) => {
+      normalized = normalized.replace(pattern, (match, before, after) => {
+        changes += 1;
+        return `<c${before}${after}/>`;
+      });
+    });
+    return { xml: normalized, changes };
+  }
+
+  function normalizeZipPart(target) {
+    const value = String(target || '').replace(/\\/g, '/');
+    if (!value) return '';
+    if (value.startsWith('/')) return value.slice(1);
+    if (value.startsWith('xl/')) return value;
+    return `xl/${value.replace(/^\.\//, '')}`;
+  }
+
+  function assertXmlDocument(documentNode, label) {
+    if (documentNode.getElementsByTagName('parsererror').length) {
+      throw new Error(`No se pudo interpretar ${label} dentro de la plantilla.`);
+    }
+  }
+
+  function withTimeout(promise, milliseconds, message) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        window.setTimeout(() => reject(new Error(message)), milliseconds);
+      })
+    ]);
+  }
+
+  function yieldToBrowser() {
+    return new Promise((resolve) => window.setTimeout(resolve, 0));
   }
 
   function enforceFileLimits() {
@@ -645,7 +758,7 @@
   function setBusy(isBusy) {
     document.body.classList.toggle('is-busy', isBusy);
     els.progressPanel.hidden = !isBusy;
-    els.processButton.disabled = isBusy || !(state.templateFile && state.sourceFiles.length);
+    els.processButton.disabled = isBusy || !(state.templateFile && state.sourceFiles.length && window.XLSX && window.XlsxPopulate && window.JSZip && P);
     els.resetButton.disabled = isBusy;
     els.downloadButton.disabled = isBusy || !state.outputBlob;
   }

@@ -1,4 +1,14 @@
-# Comité de Cartera – GitHub Pages
+# Comité de Cartera — GitHub Pages v1.3
+
+Aplicación web local para procesar la plantilla COMITE y archivos SaldosDeCarteraSencillo_Report sin enviar información a servidores.
+
+## Mejora de rendimiento v1.3
+
+- Elimina de la copia en memoria las hojas ORIGEN históricas antes de abrir la plantilla.
+- Usa SheetJS para leer rápidamente los archivos fuente.
+- Usa XlsxPopulate únicamente para conservar el diseño y generar el consolidado.
+- Normaliza celdas Excel incompatibles y aplica tiempos máximos de espera.
+- La plantilla original nunca se sobrescribe.
 
 Aplicación web estática para procesar archivos `SaldosDeCarteraSencillo_Report.xlsx` utilizando una copia limpia de la plantilla `COMITE.xlsx`.
 
