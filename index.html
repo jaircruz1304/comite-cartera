@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Procesamiento local de reportes del Comité de Cartera desde archivos Excel.">
+  <meta name="theme-color" content="#16324f">
+  <title>Comité de Cartera | Procesador Excel</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">CC</div>
+        <div>
+          <span class="eyebrow">INFORMES CTH 2026</span>
+          <h1>Comité de Cartera</h1>
+          <p>Procesamiento local, validación y generación del consolidado Excel.</p>
+        </div>
+      </div>
+      <div class="privacy-badge" id="privacyBadge">
+        <span class="privacy-dot"></span>
+        Los archivos no se envían a servidores
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero-panel">
+      <div>
+        <span class="step-tag">Flujo controlado</span>
+        <h2>Carga una plantilla limpia y los archivos de cada empresa</h2>
+        <p>El sistema recalcula los indicadores con los datos actuales, conserva trazabilidad en hojas ORIGEN y genera un archivo nuevo sin sobrescribir la plantilla.</p>
+      </div>
+      <ol class="mini-steps" aria-label="Pasos principales">
+        <li><span>1</span>Cargar plantilla</li>
+        <li><span>2</span>Cargar carteras</li>
+        <li><span>3</span>Procesar y validar</li>
+        <li><span>4</span>Descargar Excel</li>
+      </ol>
+    </section>
+
+    <section class="upload-grid" aria-label="Carga de archivos">
+      <article class="upload-card">
+        <div class="card-heading">
+          <span class="card-number">01</span>
+          <div>
+            <h3>Plantilla COMITE</h3>
+            <p>Debe cargarse en cada ejecución.</p>
+          </div>
+        </div>
+
+        <label class="drop-zone" id="templateDrop" for="templateInput">
+          <input id="templateInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <span class="upload-icon" aria-hidden="true">↑</span>
+          <strong>Selecciona o arrastra COMITE.xlsx</strong>
+          <small>La plantilla se abre como copia y nunca se sobrescribe.</small>
+        </label>
+        <p class="file-status" id="templateStatus">No se ha cargado una plantilla.</p>
+      </article>
+
+      <article class="upload-card">
+        <div class="card-heading">
+          <span class="card-number">02</span>
+          <div>
+            <h3>Archivos de cartera</h3>
+            <p>Un archivo independiente por empresa.</p>
+          </div>
+          <span class="count-badge" id="fileCountBadge">0</span>
+        </div>
+
+        <label class="drop-zone" id="sourceDrop" for="sourceInput">
+          <input id="sourceInput" type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <span class="upload-icon" aria-hidden="true">＋</span>
+          <strong>Selecciona o arrastra los SaldosDeCartera</strong>
+          <small>CTH, F12, F8 y F11 deben corresponder a la misma fecha.</small>
+        </label>
+        <p class="file-status" id="sourceStatus">No se han cargado archivos de cartera.</p>
+        <ul class="file-list" id="sourceList"></ul>
+      </article>
+    </section>
+
+    <section class="action-panel">
+      <div>
+        <h3>Procesamiento seguro</h3>
+        <p>Se excluyen totales, duplicados exactos y castigados de la cartera activa. No Devenga se calcula únicamente con sus columnas específicas.</p>
+      </div>
+      <div class="button-row">
+        <button class="button button-secondary" id="resetButton" type="button">Limpiar sesión</button>
+        <button class="button button-primary" id="processButton" type="button" disabled>Procesar cartera</button>
+        <button class="button button-success" id="downloadButton" type="button" disabled>Descargar consolidado</button>
+      </div>
+    </section>
+
+    <section class="progress-panel" id="progressPanel" hidden aria-live="polite">
+      <div class="progress-track"><div id="progressBar"></div></div>
+      <p id="progressText">Listo para procesar.</p>
+    </section>
+
+    <div class="message" id="messageArea" hidden role="status"></div>
+
+    <section class="dashboard empty" id="dashboard">
+      <div class="dashboard-header">
+        <div>
+          <span class="eyebrow">Resultado de la ejecución</span>
+          <h2>Panel de control</h2>
+          <p>Fecha de corte: <strong id="cutDateLabel">—</strong></p>
+        </div>
+        <label class="filter-control">
+          <span>Empresa</span>
+          <select id="companyFilter">
+            <option value="ALL">Todas las empresas</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="dashboard-grid">
+        <article class="panel chart-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Comparativo</span>
+              <h3>Composición por empresa</h3>
+            </div>
+            <div class="legend">
+              <span><i class="legend-total"></i>Total</span>
+              <span><i class="legend-nd"></i>No Devenga</span>
+              <span><i class="legend-overdue"></i>Vencida</span>
+            </div>
+          </div>
+          <div class="chart-area" id="chartArea">
+            <p class="placeholder">Los gráficos aparecerán después de procesar los archivos.</p>
+          </div>
+        </article>
+
+        <article class="panel validation-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Auditoría</span>
+              <h3>Validaciones aplicadas</h3>
+            </div>
+          </div>
+          <ul class="validation-list" id="validationList">
+            <li class="validation-info"><span></span>Carga los archivos para iniciar.</li>
+          </ul>
+        </article>
+      </div>
+
+      <article class="panel table-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">Valores expresados en miles</span>
+            <h3>Resumen por empresa</h3>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>Total cartera</th>
+                <th>Operaciones</th>
+                <th>Vencida</th>
+                <th>No Devenga</th>
+                <th>ND 60–90</th>
+                <th>ND +90</th>
+                <th>Castigada</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTableBody">
+              <tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="privacy-panel">
+      <div class="privacy-icon" aria-hidden="true">✓</div>
+      <div>
+        <h3>Privacidad del procesamiento</h3>
+        <p>GitHub Pages publica únicamente el código HTML, CSS y JavaScript. Los archivos Excel seleccionados se leen en la memoria del navegador y no se cargan al repositorio ni se transmiten a un servidor por esta aplicación.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Comité de Cartera · Aplicación local-first · Versión 1.0.0</p>
+  </footer>
+
+  <script src="https://unpkg.com/xlsx-populate@1.21.0/browser/xlsx-populate-no-encryption.min.js"
+          integrity="sha512-JVBz6zJ6cvcRjn7GayGJ/dsfYmykXq/O+BG5jqvCotbSkRd7pD/k0q/wqoIKEgXTh9lBxWoInk0DgrDhpXc9JA=="
+          crossorigin="anonymous"></script>
+  <script src="js/processor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

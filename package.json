@@ -1,0 +1,9 @@
+{
+  "name": "comite-cartera-github-pages",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Procesador local de reportes del Comité de Cartera.",
+  "scripts": {
+    "test": "node tests/processor-smoke.js"
+  }
+}
