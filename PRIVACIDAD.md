@@ -1,12 +1,21 @@
-# Privacidad y tratamiento de archivos
+# Privacidad y seguridad
 
-Esta aplicación funciona bajo un modelo **local-first**.
+## Procesamiento local
 
-- Los archivos `SaldosDeCarteraSencillo_Report.xlsx` seleccionados por el usuario se leen y procesan en la memoria del navegador.
-- Los reportes no se cargan al repositorio de GitHub.
-- Los reportes no se envían a un servidor por el código de esta aplicación.
-- La plantilla `assets/COMITE_BASE.xlsx` forma parte del repositorio, pero no contiene información histórica ni datos reales de cartera.
-- El archivo consolidado se genera localmente y se descarga directamente al equipo del usuario.
-- Al recargar o cerrar la página, los archivos cargados dejan de estar disponibles para la aplicación.
+Los archivos Excel se seleccionan mediante el navegador y se procesan en memoria. La aplicación no contiene llamadas `fetch`, formularios de envío ni conexiones a una API para transmitir los archivos.
 
-No deben subirse al repositorio archivos fuente, consolidaciones generadas ni información financiera institucional.
+## Repositorio
+
+El repositorio debe contener únicamente código. No se deben publicar archivos reales de cartera, plantillas con información financiera, resultados consolidados ni credenciales.
+
+## Acceso al sitio
+
+GitHub Pages puede ser públicamente accesible según el plan y la configuración del repositorio. Que el código sea público no implica que los archivos procesados se publiquen: los archivos solo se incorporan cuando el usuario los selecciona localmente.
+
+## Recomendaciones institucionales
+
+- Utilizar equipos autorizados.
+- Verificar que la URL corresponda al repositorio oficial.
+- Cerrar o recargar la página al terminar para liberar la sesión.
+- Guardar los archivos resultantes únicamente en ubicaciones institucionales autorizadas.
+- No incorporar analítica web, rastreadores ni librerías adicionales sin revisión de seguridad.

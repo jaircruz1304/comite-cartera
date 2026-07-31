@@ -1,9 +1,9 @@
 {
   "name": "comite-cartera-github-pages",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
-  "description": "Procesador local de reportes del Comité de Cartera.",
+  "description": "Procesador local de reportes del Comité de Cartera con motor OOXML estable.",
   "scripts": {
-    "test": "node tests/processor-smoke.js && node tests/repository-smoke.js"
+    "test": "node tests/processor-smoke.js && node tests/ooxml-smoke.js && node tests/repository-smoke.js"
   }
 }

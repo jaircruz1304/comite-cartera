@@ -24,8 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Run processor smoke test
-        run: node tests/processor-smoke.js
+      - name: Run automated tests
+        run: npm test
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

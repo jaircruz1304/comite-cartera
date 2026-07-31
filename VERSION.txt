@@ -1,1 +1,6 @@
-1.4.0
+1.5.0
+- Motor OOXML estable sin XlsxPopulate.
+- Lector de reportes local basado en JSZip.
+- Descarga XLSX validada.
+- Dashboard enterprise sin barras horizontales.
+- Valores HTML en miles y sin decimales.
