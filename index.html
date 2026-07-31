@@ -137,21 +137,9 @@
             <div class="step-number">04</div>
             <div class="heading-copy"><span class="section-kicker">DESCARGAS</span><h3>Obtener resultados</h3><p>Descargue cada consolidado de forma independiente.</p></div>
           </div>
-          <div class="export-groups">
-            <article class="export-group">
-              <header><span>ESCENARIO</span><strong>Normal</strong><small>Resultados directos del archivo fuente.</small></header>
-              <div class="export-options">
-                <button class="button button-download" id="downloadNormalButton" disabled><span><strong>Excel estándar</strong><small>Formato actual y precisión contable</small></span><b>↓</b></button>
-                <button class="button button-download button-enterprise" id="downloadNormalEnterpriseButton" disabled><span><strong>Dashboard Enterprise</strong><small>HTML ejecutivo e interactivo</small></span><b>↗</b></button>
-              </div>
-            </article>
-            <article class="export-group projected-export-group">
-              <header><span>ESCENARIO</span><strong>Proyectado</strong><small>Resultados según parámetros configurados.</small></header>
-              <div class="export-options">
-                <button class="button button-download projected-download" id="downloadProjectedButton" disabled><span><strong>Excel estándar</strong><small>Formato actual y precisión contable</small></span><b>↓</b></button>
-                <button class="button button-download button-enterprise projected-enterprise" id="downloadProjectedEnterpriseButton" disabled><span><strong>Dashboard Enterprise</strong><small>HTML ejecutivo e interactivo</small></span><b>↗</b></button>
-              </div>
-            </article>
+          <div class="download-actions">
+            <button class="button button-download" id="downloadNormalButton" disabled><span><strong>Escenario Normal</strong><small>Excel consolidado</small></span><b>↓</b></button>
+            <button class="button button-download projected-download" id="downloadProjectedButton" disabled><span><strong>Escenario Proyectado</strong><small>Excel consolidado</small></span><b>↓</b></button>
           </div>
           <button class="button button-text" id="resetButton">Limpiar sesión y comenzar de nuevo</button>
         </div>
@@ -220,7 +208,7 @@
   </main>
 
   <footer class="enterprise-footer">
-    <div><strong>CTH · Comité de Cartera</strong><span>Versión 1.8.0 · Exportación estándar y Enterprise</span></div>
+    <div><strong>CTH · Comité de Cartera</strong><span>Versión 1.7.1 · Escenarios Normal y Proyectado</span></div>
     <div><span>Desarrolladora</span><strong>Lizbeth Sanipatín</strong></div>
   </footer>
 

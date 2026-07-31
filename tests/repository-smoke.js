@@ -21,8 +21,6 @@ assert.match(index, /id="sourceInput"/);
 assert.match(index, /id="horizonDays"/);
 assert.match(index, /id="downloadNormalButton"/);
 assert.match(index, /id="downloadProjectedButton"/);
-assert.match(index, /id="downloadNormalEnterpriseButton"/);
-assert.match(index, /id="downloadProjectedEnterpriseButton"/);
 assert.match(index, /js\/projection\.js/);
 assert.match(index, /Lizbeth Sanipatín/);
 assert.match(index, /assets\/logo_CTH\.png/);
@@ -33,9 +31,6 @@ assert.doesNotMatch(index, /xlsx-populate/i);
 assert.match(app, /assets\/COMITE_BASE\.xlsx/);
 assert.match(app, /R\.projectAnalysis/);
 assert.match(app, /X\.build\(/);
-assert.match(app, /downloadEnterpriseDashboard/);
-assert.match(app, /buildEnterpriseDashboardHtml/);
-assert.match(app, /Dashboard_Enterprise_/);
 assert.match(engine, /OOXMLWorkbook|function build/);
 assert.match(projection, /reclassifiedOperations/);
 

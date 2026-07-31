@@ -19,8 +19,7 @@
     selectedScenario: 'NORMAL',
     baseDate: null,
     targetDate: null,
-    projectionParams: null,
-    logoDataUrl: null
+    projectionParams: null
   };
 
   const els = {};
@@ -47,7 +46,7 @@
   function cacheElements() {
     [
       'sourceInput', 'sourceDrop', 'sourceStatus', 'sourceList', 'processButton',
-      'downloadNormalButton', 'downloadProjectedButton', 'downloadNormalEnterpriseButton', 'downloadProjectedEnterpriseButton', 'resetButton', 'progressPanel',
+      'downloadNormalButton', 'downloadProjectedButton', 'resetButton', 'progressPanel',
       'progressText', 'processSteps', 'messageArea', 'dashboard', 'companyFilter',
       'companyFilterLabel', 'summaryTableBody', 'companyCards',
       'cutDateLabel', 'dateChipLabel', 'fileCountBadge', 'templateRepoStatus',
@@ -63,8 +62,6 @@
     els.processButton.addEventListener('click', processFiles);
     els.downloadNormalButton.addEventListener('click', () => downloadBlob(state.normalOutputBlob, state.normalOutputName));
     els.downloadProjectedButton.addEventListener('click', () => downloadBlob(state.projectedOutputBlob, state.projectedOutputName));
-    els.downloadNormalEnterpriseButton.addEventListener('click', () => downloadEnterpriseDashboard('NORMAL'));
-    els.downloadProjectedEnterpriseButton.addEventListener('click', () => downloadEnterpriseDashboard('PROYECTADO'));
     els.resetButton.addEventListener('click', resetSession);
     els.companyFilter.addEventListener('change', (event) => {
       state.selectedCompany = event.target.value;
@@ -206,10 +203,8 @@
     els.processButton.disabled = !(state.templateReady && state.sourceFiles.length && runtimeReady);
     els.downloadNormalButton.disabled = !state.normalOutputBlob;
     els.downloadProjectedButton.disabled = !state.projectedOutputBlob;
-    els.downloadNormalEnterpriseButton.disabled = !state.normalAnalyses.length;
-    els.downloadProjectedEnterpriseButton.disabled = !state.projectedAnalyses.length;
     const outputs = [state.normalOutputName, state.projectedOutputName].filter(Boolean);
-    els.lastOutputLabel.textContent = outputs.length ? '4 archivos disponibles' : 'Aún no se han generado salidas';
+    els.lastOutputLabel.textContent = outputs.length ? `${outputs.length} archivos listos` : 'Aún no se han generado salidas';
   }
 
   function readProjectionParams() {
@@ -529,8 +524,6 @@
     els.resetButton.disabled = isBusy;
     els.downloadNormalButton.disabled = isBusy || !state.normalOutputBlob;
     els.downloadProjectedButton.disabled = isBusy || !state.projectedOutputBlob;
-    els.downloadNormalEnterpriseButton.disabled = isBusy || !state.normalAnalyses.length;
-    els.downloadProjectedEnterpriseButton.disabled = isBusy || !state.projectedAnalyses.length;
     if (!isBusy) renderProcessSteps(0);
   }
 
@@ -544,106 +537,6 @@
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 3000);
-  }
-
-  async function downloadEnterpriseDashboard(scenario) {
-    const projected = scenario === 'PROYECTADO';
-    const analyses = projected ? state.projectedAnalyses : state.normalAnalyses;
-    if (!analyses.length) return;
-
-    try {
-      const logoDataUrl = await getEmbeddedLogoDataUrl();
-      const reportDate = projected ? state.targetDate : state.baseDate;
-      const payload = {
-        scenario,
-        scenarioLabel: projected ? 'Escenario Proyectado' : 'Escenario Normal',
-        subtitle: projected
-          ? `Proyección a ${state.projectionParams.horizonDays} días · Umbral > ${state.projectionParams.thresholdDays}`
-          : 'Resultados obtenidos directamente de los archivos originales',
-        dateLabel: projected ? 'Fecha objetivo' : 'Fecha de corte',
-        dateValue: formatDate(reportDate),
-        baseDate: formatDate(state.baseDate),
-        targetDate: formatDate(state.targetDate),
-        horizonDays: projected ? state.projectionParams.horizonDays : 0,
-        thresholdDays: projected ? state.projectionParams.thresholdDays : null,
-        logoDataUrl,
-        generatedAt: new Date().toLocaleString('es-EC'),
-        rows: analyses.map(({ metrics, projection }) => ({
-          company: metrics.company,
-          total: metrics.total.value,
-          operations: metrics.total.operations,
-          overdue: metrics.overdue.value,
-          overdueOperations: metrics.overdue.operations,
-          noDevenga: metrics.noDevenga.value,
-          noDevengaOperations: metrics.noDevenga.operations,
-          noDevenga6090: metrics.noDevenga6090.value,
-          noDevengaOver90: metrics.noDevengaOver90.value,
-          chargedOff: metrics.chargedOff.value || 0,
-          chargedOffOperations: metrics.chargedOff.operations || 0,
-          reclassified: projection?.reclassifiedOperations || 0,
-          status: metrics.status || 'OK'
-        }))
-      };
-
-      const html = buildEnterpriseDashboardHtml(payload);
-      const keyDate = P.fileDateKey(reportDate);
-      const name = `Dashboard_Enterprise_${projected ? 'Proyectado' : 'Normal'}_${keyDate}.html`;
-      downloadBlob(new Blob(['\ufeff', html], { type: 'text/html;charset=utf-8' }), name);
-      showMessage('success', `Dashboard Enterprise ${projected ? 'Proyectado' : 'Normal'} generado correctamente.`);
-    } catch (error) {
-      console.error('No se pudo generar el Dashboard Enterprise:', error);
-      showMessage('error', 'No fue posible generar el Dashboard Enterprise. Vuelve a intentarlo.');
-    }
-  }
-
-  async function getEmbeddedLogoDataUrl() {
-    if (state.logoDataUrl) return state.logoDataUrl;
-    try {
-      const response = await fetch('assets/logo_CTH.png', { cache: 'force-cache' });
-      if (!response.ok) return '';
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      let binary = '';
-      const chunk = 0x8000;
-      for (let index = 0; index < bytes.length; index += chunk) {
-        binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
-      }
-      state.logoDataUrl = `data:image/png;base64,${btoa(binary)}`;
-      return state.logoDataUrl;
-    } catch (error) {
-      console.warn('No se pudo incrustar el logo en el dashboard exportado:', error);
-      return '';
-    }
-  }
-
-  function buildEnterpriseDashboardHtml(payload) {
-    const serialized = JSON.stringify(payload).replace(/</g, '\\u003c');
-    return `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CTH | ${escapeHtml(payload.scenarioLabel)} | Enterprise Dashboard</title>
-<style>
-:root{--navy:#0f2f49;--navy2:#184b70;--green:#18835f;--green2:#57ad8c;--red:#c13e49;--amber:#c68a22;--ink:#182b3a;--muted:#667988;--line:#dbe5ec;--bg:#eef3f6;--white:#fff;--shadow:0 18px 45px rgba(15,47,73,.10)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}.shell{width:min(1440px,calc(100% - 42px));margin:0 auto}.top{background:linear-gradient(120deg,#0b263b,#154b70);color:white}.topin{min-height:116px;display:flex;align-items:center;justify-content:space-between;gap:28px}.brand{display:flex;align-items:center;gap:22px}.logo{width:148px;height:66px;display:grid;place-items:center;padding:8px 12px;border-radius:15px;background:white}.logo img{max-width:100%;max-height:100%;object-fit:contain}.brand h1{margin:4px 0 0;font-size:27px;letter-spacing:-.03em}.eyebrow{font-size:10px;font-weight:800;letter-spacing:.16em;color:#9dc7db}.brand p{margin:7px 0 0;color:#d1e2ec;font-size:13px}.meta{text-align:right}.meta span,.meta strong{display:block}.meta span{font-size:10px;color:#a9c8da;text-transform:uppercase;letter-spacing:.1em}.meta strong{margin-top:5px;font-size:15px}.toolbar{margin-top:-18px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:18px;border:1px solid rgba(15,47,73,.08);border-radius:16px;background:white;box-shadow:var(--shadow)}.toolbar-left,.toolbar-right{display:flex;align-items:center;gap:12px}.badge{padding:7px 10px;border-radius:999px;background:#e8f4ef;color:var(--green);font-size:10px;font-weight:850;letter-spacing:.08em}.datebox span,.datebox strong{display:block}.datebox span{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.datebox strong{margin-top:2px;font-size:13px}.toolbar select,.toolbar button{height:38px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);font:inherit}.toolbar select{padding:0 34px 0 12px;font-size:12px}.toolbar button{padding:0 14px;font-size:11px;font-weight:750;cursor:pointer}.toolbar button:hover{background:#f4f8fa}.content{padding:28px 0 36px}.section-title{margin:0 0 14px}.section-title span{display:block;color:var(--green);font-size:9px;font-weight:850;letter-spacing:.14em}.section-title h2{margin:5px 0 0;font-size:20px}.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.kpi{position:relative;overflow:hidden;min-height:126px;padding:17px;border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 9px 24px rgba(15,47,73,.06)}.kpi:after{content:"";position:absolute;right:-24px;bottom:-32px;width:90px;height:90px;border-radius:50%;background:rgba(24,131,95,.08)}.kpi span,.kpi strong,.kpi small{display:block}.kpi span{font-size:10px;color:var(--muted);font-weight:750}.kpi strong{margin-top:12px;color:var(--navy);font-size:27px;letter-spacing:-.04em}.kpi small{margin-top:8px;color:var(--muted);font-size:10px}.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:16px;margin-top:18px}.panel{padding:20px;border:1px solid var(--line);border-radius:17px;background:white;box-shadow:0 10px 26px rgba(15,47,73,.055)}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}.panel-head h3{margin:0;font-size:15px}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:10px}.metric-switch{display:flex;gap:5px;padding:4px;border-radius:10px;background:#eef3f6}.metric-switch button{border:0;border-radius:7px;padding:7px 9px;background:transparent;color:var(--muted);font-size:9px;font-weight:800;cursor:pointer}.metric-switch button.active{background:white;color:var(--navy);box-shadow:0 2px 7px rgba(15,47,73,.1)}.bars{display:grid;gap:14px}.bar-row{display:grid;grid-template-columns:44px 1fr 80px;align-items:center;gap:10px}.bar-row strong{font-size:11px}.track{height:11px;overflow:hidden;border-radius:99px;background:#e9eff3}.fill{height:100%;min-width:2px;border-radius:99px;background:linear-gradient(90deg,var(--navy2),#4f8cac)}.bar-row[data-tone="risk"] .fill{background:linear-gradient(90deg,var(--amber),#e4b24f)}.bar-row[data-tone="critical"] .fill{background:linear-gradient(90deg,var(--red),#df7079)}.bar-value{text-align:right;font-size:11px;font-weight:800;color:var(--navy)}.rings{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.ring-card{text-align:center;padding:13px 8px;border:1px solid #e5edf2;border-radius:14px;background:#f9fbfc}.ring{--p:0;--c:var(--green);width:88px;height:88px;margin:0 auto;display:grid;place-items:center;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),#dfe8ee 0);position:relative}.ring:before{content:"";position:absolute;inset:10px;border-radius:50%;background:white}.ring strong{position:relative;font-size:18px;color:var(--navy)}.ring-card span{display:block;margin-top:9px;color:var(--muted);font-size:9px;font-weight:800}.insight{margin-top:14px;padding:14px;border-left:4px solid var(--green);border-radius:10px;background:#f0f8f4}.insight strong{display:block;font-size:11px;color:var(--navy)}.insight p{margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.55}.table-panel{margin-top:18px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{width:100%;border-collapse:collapse;background:white;font-size:10px}th{padding:11px 12px;background:#f2f6f8;color:#4e6474;text-align:left;text-transform:uppercase;letter-spacing:.06em;font-size:8px}td{padding:11px 12px;border-top:1px solid #e6edf2}td.num{text-align:right;font-variant-numeric:tabular-nums}.pill{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eaf6f0;color:var(--green);font-size:8px;font-weight:850}.footer{padding:18px 0 24px;border-top:1px solid #d8e2e9;color:var(--muted);font-size:9px}.footerin{display:flex;justify-content:space-between;gap:18px}.note{margin-top:15px;color:var(--muted);font-size:9px}.empty{padding:36px;text-align:center;color:var(--muted)}
-@media(max-width:1050px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}.topin{align-items:flex-start;padding:22px 0}.meta{display:none}}@media(max-width:680px){.shell{width:min(100% - 20px,1440px)}.brand{align-items:flex-start}.logo{width:100px;height:52px}.brand h1{font-size:21px}.brand p{display:none}.toolbar,.toolbar-left,.toolbar-right{align-items:stretch;flex-direction:column}.kpis{grid-template-columns:1fr}.rings{grid-template-columns:1fr}.bar-row{grid-template-columns:38px 1fr 64px}.footerin{flex-direction:column}}
-@media print{body{background:white}.toolbar button,.toolbar select,.metric-switch{display:none}.toolbar{margin-top:0;box-shadow:none}.panel,.kpi{box-shadow:none}.content{padding-top:16px}.shell{width:100%}}
-</style>
-</head>
-<body>
-<header class="top"><div class="shell topin"><div class="brand"><div class="logo">${payload.logoDataUrl ? `<img src="${payload.logoDataUrl}" alt="CTH">` : '<strong>CTH</strong>'}</div><div><span class="eyebrow">GESTIÓN Y ANÁLISIS FINANCIERO</span><h1>Enterprise Dashboard · ${escapeHtml(payload.scenarioLabel)}</h1><p>${escapeHtml(payload.subtitle)}</p></div></div><div class="meta"><span>Desarrolladora</span><strong>Lizbeth Sanipatín</strong></div></div></header>
-<div class="shell toolbar"><div class="toolbar-left"><span class="badge">VALORES EN MILES</span><div class="datebox"><span>${escapeHtml(payload.dateLabel)}</span><strong>${escapeHtml(payload.dateValue)}</strong></div></div><div class="toolbar-right"><label class="datebox"><span>Empresa</span><select id="companyFilter"><option value="ALL">Todas las empresas</option></select></label><button id="printButton">Imprimir / Guardar PDF</button></div></div>
-<main class="shell content"><div class="section-title"><span>RESUMEN EJECUTIVO</span><h2 id="scopeTitle">Consolidado de todas las empresas</h2></div><section class="kpis" id="kpis"></section><div class="grid2"><section class="panel"><div class="panel-head"><div><h3>Exposición por empresa</h3><p>Comparación visual en miles, sin decimales.</p></div><div class="metric-switch"><button class="active" data-metric="total">Total</button><button data-metric="noDevenga">No Devenga</button><button data-metric="overdue">Vencida</button></div></div><div class="bars" id="bars"></div></section><section class="panel"><div class="panel-head"><div><h3>Composición de riesgo</h3><p>Participación sobre la cartera total.</p></div></div><div class="rings" id="rings"></div><div class="insight" id="insight"></div></section></div><section class="panel table-panel"><div class="panel-head"><div><h3>Matriz ejecutiva</h3><p>Resultados oficiales utilizados para esta exportación.</p></div></div><div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Total cartera</th><th>Operaciones</th><th>Vencida</th><th>No Devenga</th><th>ND 60–90</th><th>ND +90</th><th>Castigada</th>${payload.scenario === 'PROYECTADO' ? '<th>Reclasificadas</th>' : ''}<th>Estado</th></tr></thead><tbody id="tableBody"></tbody></table></div><p class="note">Esta presentación es exclusivamente visual. Los valores provienen del mismo motor validado que genera el Excel estándar y no modifican las reglas de negocio.</p></section></main>
-<footer class="footer"><div class="shell footerin"><span>CTH · Comité de Cartera · ${escapeHtml(payload.scenarioLabel)}</span><span>Generado: ${escapeHtml(payload.generatedAt)} · Privacidad por diseño</span></div></footer>
-<script>
-const REPORT=${serialized};let metric='total';const money=v=>Math.round((Number(v)||0)/1000).toLocaleString('es-EC',{maximumFractionDigits:0});const integer=v=>(Number(v)||0).toLocaleString('es-EC',{maximumFractionDigits:0});const pct=(a,b)=>b?Math.round(a/b*100):0;const sum=(rows,key)=>rows.reduce((t,r)=>t+(Number(r[key])||0),0);const filter=document.getElementById('companyFilter');REPORT.rows.forEach(r=>{const o=document.createElement('option');o.value=r.company;o.textContent=r.company;filter.appendChild(o)});document.getElementById('printButton').onclick=()=>window.print();document.querySelectorAll('[data-metric]').forEach(b=>b.onclick=()=>{metric=b.dataset.metric;document.querySelectorAll('[data-metric]').forEach(x=>x.classList.toggle('active',x===b));render()});filter.onchange=render;
-function current(){return filter.value==='ALL'?REPORT.rows:REPORT.rows.filter(r=>r.company===filter.value)}
-function render(){const rows=current();document.getElementById('scopeTitle').textContent=filter.value==='ALL'?'Consolidado de todas las empresas':'Empresa '+filter.value;const total=sum(rows,'total'),ops=sum(rows,'operations'),over=sum(rows,'overdue'),nd=sum(rows,'noDevenga'),over90=sum(rows,'noDevengaOver90'),cast=sum(rows,'chargedOff'),recl=sum(rows,'reclassified');const cards=[['Total cartera',money(total),integer(ops)+' operaciones'],['Cartera vencida',money(over),pct(over,total)+'% del total'],['No Devenga',money(nd),pct(nd,total)+'% del total'],['No Devenga +90',money(over90),pct(over90,total)+'% del total'],REPORT.scenario==='PROYECTADO'?['Reclasificadas',integer(recl),'operaciones proyectadas']:['Cartera castigada',cast?money(cast):'—',cast?integer(sum(rows,'chargedOffOperations'))+' operaciones':'Sin información']];document.getElementById('kpis').innerHTML=cards.map(c=>'<article class="kpi"><span>'+c[0]+'</span><strong>'+c[1]+'</strong><small>'+c[2]+'</small></article>').join('');renderBars(rows);document.getElementById('rings').innerHTML=[['No Devenga',pct(nd,total),'#c68a22'],['Vencida',pct(over,total),'#c13e49'],['ND +90',pct(over90,total),'#184b70']].map(r=>'<article class="ring-card"><div class="ring" style="--p:'+r[1]+';--c:'+r[2]+'"><strong>'+r[1]+'%</strong></div><span>'+r[0]+'</span></article>').join('');const highest=[...rows].sort((a,b)=>(b.noDevenga/b.total)-(a.noDevenga/a.total))[0];document.getElementById('insight').innerHTML=highest?'<strong>Lectura ejecutiva</strong><p>'+highest.company+' presenta la mayor participación de No Devenga ('+pct(highest.noDevenga,highest.total)+'%). '+(REPORT.scenario==='PROYECTADO'?integer(recl)+' operaciones fueron reclasificadas en el escenario seleccionado.':'Los valores corresponden al corte real procesado.')+'</p>':'<strong>Sin información</strong>';document.getElementById('tableBody').innerHTML=rows.map(r=>'<tr><td><strong>'+r.company+'</strong></td><td class="num">'+money(r.total)+'</td><td class="num">'+integer(r.operations)+'</td><td class="num">'+money(r.overdue)+'</td><td class="num">'+money(r.noDevenga)+'</td><td class="num">'+money(r.noDevenga6090)+'</td><td class="num">'+money(r.noDevengaOver90)+'</td><td class="num">'+(r.chargedOff?money(r.chargedOff):'—')+'</td>'+(REPORT.scenario==='PROYECTADO'?'<td class="num">'+integer(r.reclassified)+'</td>':'')+'<td><span class="pill">'+r.status+'</span></td></tr>').join('')}
-function renderBars(rows){const max=Math.max(1,...rows.map(r=>Number(r[metric])||0));const tone=metric==='overdue'?'critical':metric==='noDevenga'?'risk':'';document.getElementById('bars').innerHTML=rows.map(r=>'<div class="bar-row" data-tone="'+tone+'"><strong>'+r.company+'</strong><div class="track"><div class="fill" style="width:'+Math.max(1,Math.round((r[metric]||0)/max*100))+'%"></div></div><span class="bar-value">'+money(r[metric])+'</span></div>').join('')}
-render();
-<\/script>
-</body>
-</html>`;
   }
 
   function resetSession() {
