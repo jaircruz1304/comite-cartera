@@ -141,3 +141,7 @@ El motor de cálculo fue contrastado con los cuatro archivos del corte del 29 de
 3. Configuración editable de umbrales de semáforos.
 4. Modo sin conexión con la biblioteca incluida dentro del repositorio.
 5. Pruebas automáticas de regresión con archivos anonimizados.
+
+## Corrección 1.2.0 — compatibilidad con celdas vacías
+
+Esta versión incorpora una normalización automática de ciertas celdas vacías que Excel puede guardar como `inlineStr` sin contenido. Ese patrón es válido para Excel, pero provoca en `xlsx-populate 1.21.0` el error `Cannot read properties of undefined (reading 'children')`. La aplicación corrige únicamente ese detalle interno en la copia temporal cargada en memoria, sin sobrescribir ni modificar la plantilla original.

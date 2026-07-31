@@ -188,8 +188,16 @@
   </main>
 
   <footer>
-    <p>Comité de Cartera · Aplicación local-first · Versión 1.0.1</p>
+    <p>Comité de Cartera · Aplicación local-first · Versión 1.2.0</p>
   </footer>
+
+  <!-- JSZip permite normalizar celdas vacías incompatibles antes de abrir el Excel. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    if (!window.JSZip) {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"><\/script>');
+    }
+  </script>
 
   <!-- Motor Excel: CDN principal + respaldo. Sin SRI para evitar bloqueos por hash o proxy corporativo. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-populate/1.21.0/xlsx-populate-no-encryption.min.js"></script>

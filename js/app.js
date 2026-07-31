@@ -56,6 +56,11 @@
       els.processButton.disabled = true;
       return;
     }
+    if (!window.JSZip) {
+      showMessage('error', 'No se cargó el componente de compatibilidad Excel (JSZip). Recarga con Ctrl+F5 o revisa si la red bloquea los CDN.');
+      els.processButton.disabled = true;
+      return;
+    }
     if (!P) {
       showMessage('error', 'No se cargó el motor de reglas de cartera. Confirma que js/processor.js exista y respete mayúsculas/minúsculas.');
       els.processButton.disabled = true;
@@ -152,7 +157,7 @@
       els.sourceList.appendChild(item);
     });
 
-    els.processButton.disabled = !(state.templateFile && state.sourceFiles.length && window.XlsxPopulate && P);
+    els.processButton.disabled = !(state.templateFile && state.sourceFiles.length && window.XlsxPopulate && window.JSZip && P);
     els.downloadButton.disabled = !state.outputBlob;
   }
 
@@ -170,7 +175,7 @@
       enforceFileLimits();
 
       updateProgress(10, 'Abriendo una copia limpia de la plantilla COMITE…');
-      const reportWorkbook = await XlsxPopulate.fromDataAsync(state.templateFile);
+      const reportWorkbook = await openWorkbookSafely(state.templateFile, 'la plantilla COMITE');
       validateTemplateWorkbook(reportWorkbook);
       prepareFreshTemplate(reportWorkbook);
 
@@ -181,7 +186,7 @@
         const span = 46;
         updateProgress(start + Math.round((index / state.sourceFiles.length) * span), `Analizando ${file.name}…`);
 
-        const sourceWorkbook = await XlsxPopulate.fromDataAsync(file);
+        const sourceWorkbook = await openWorkbookSafely(file, `el archivo ${file.name}`);
         const sourceSheet = sourceWorkbook.sheet(0);
         if (!sourceSheet) throw new Error(`El archivo ${file.name} no contiene hojas.`);
         const usedRange = sourceSheet.usedRange();
@@ -219,6 +224,72 @@
       setBusy(false);
       updateFilesUI();
     }
+  }
+
+  async function openWorkbookSafely(file, label) {
+    try {
+      return await XlsxPopulate.fromDataAsync(file);
+    } catch (initialError) {
+      const message = String(initialError && initialError.message ? initialError.message : initialError);
+      const isXmlCellError = /children|_parseNode|Cannot read propert/i.test(message);
+      if (!isXmlCellError || !window.JSZip) {
+        throw new Error(`No se pudo abrir ${label}: ${message}`);
+      }
+
+      updateProgress(12, `Corrigiendo compatibilidad interna de ${label}…`);
+      const sanitized = await sanitizeWorkbookForPopulate(file);
+      try {
+        return await XlsxPopulate.fromDataAsync(sanitized.blob);
+      } catch (retryError) {
+        const retryMessage = String(retryError && retryError.message ? retryError.message : retryError);
+        throw new Error(`No se pudo abrir ${label}, incluso después de normalizar ${sanitized.changes} celda(s) vacía(s): ${retryMessage}`);
+      }
+    }
+  }
+
+  async function sanitizeWorkbookForPopulate(file) {
+    const input = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(input);
+    const worksheetNames = Object.keys(zip.files).filter((name) => /^xl\/worksheets\/sheet[^/]*\.xml$/i.test(name));
+    let changes = 0;
+
+    for (const name of worksheetNames) {
+      const entry = zip.file(name);
+      if (!entry) continue;
+      const xml = await entry.async('string');
+      let normalized = xml;
+
+      // Excel puede guardar celdas vacías como inlineStr sin nodo <is>.
+      // xlsx-populate 1.21.0 intenta leer un hijo inexistente y produce
+      // “Cannot read properties of undefined (reading children)”.
+      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)\/>/g, (match, before, after) => {
+        changes += 1;
+        return `<c${before}${after}/>`;
+      });
+      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<\/c>/g, (match, before, after) => {
+        changes += 1;
+        return `<c${before}${after}/>`;
+      });
+      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is\s*\/>\s*<\/c>/g, (match, before, after) => {
+        changes += 1;
+        return `<c${before}${after}/>`;
+      });
+      normalized = normalized.replace(/<c\b([^>]*?)\s+t="inlineStr"([^>]*)>\s*<is>\s*<\/is>\s*<\/c>/g, (match, before, after) => {
+        changes += 1;
+        return `<c${before}${after}/>`;
+      });
+
+      if (normalized !== xml) zip.file(name, normalized);
+    }
+
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+
+    return { blob, changes };
   }
 
   function enforceFileLimits() {
