@@ -52,14 +52,16 @@
 
   function checkRuntime() {
     if (!window.XlsxPopulate) {
-      showMessage('error', 'No fue posible cargar el motor de Excel. Verifica la conexión a Internet y vuelve a abrir la página.');
+      showMessage('error', 'No se cargó el motor de Excel (XlsxPopulate). La red puede estar bloqueando los CDN. Recarga con Ctrl+F5; si continúa, revisa la consola del navegador.');
       els.processButton.disabled = true;
       return;
     }
     if (!P) {
-      showMessage('error', 'No se cargó el motor de reglas de cartera. Revisa que js/processor.js exista en el repositorio.');
+      showMessage('error', 'No se cargó el motor de reglas de cartera. Confirma que js/processor.js exista y respete mayúsculas/minúsculas.');
       els.processButton.disabled = true;
+      return;
     }
+    updateFilesUI();
   }
 
   function setupDropZone(element, callback) {
