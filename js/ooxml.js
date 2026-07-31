@@ -382,16 +382,30 @@
     zip.file(path, xml);
   }
 
-  function controlMatrix(analyses, periodLabel) {
+  function controlMatrix(analyses, periodLabel, options) {
+    const config = options || {};
+    const scenario = config.scenario || 'NORMAL';
+    const baseDate = config.baseDate instanceof Date ? config.baseDate : analyses[0].metrics.cutDate;
+    const targetDate = config.targetDate instanceof Date ? config.targetDate : analyses[0].metrics.cutDate;
+    const projection = config.projection || {};
     const headers = [
-      'EMPRESA', 'FECHA CORTE', 'ARCHIVO FUENTE', 'TOTAL CARTERA', 'OPERACIONES',
+      'EMPRESA', 'FECHA ESCENARIO', 'ARCHIVO FUENTE', 'TOTAL CARTERA', 'OPERACIONES',
       'CARTERA VENCIDA', 'OP. VENCIDA', 'NO DEVENGA', 'OP. NO DEVENGA',
       'NO DEVENGA 60-90', 'OP. 60-90', 'NO DEVENGA +90', 'OP. +90',
-      'CASTIGADA', 'OP. CASTIGADA', 'DUPLICADOS EXCLUIDOS', 'ESTADO', 'OBSERVACIONES'
+      'CASTIGADA', 'OP. CASTIGADA', 'RECLASIFICADAS', 'DUPLICADOS EXCLUIDOS', 'ESTADO', 'OBSERVACIONES'
     ];
+    const ruleText = scenario === 'PROYECTADO'
+      ? `Dias Morosidad +${projection.horizonDays || 0}; reclasificar Por Vencer cuando el resultado sea > ${projection.thresholdDays == null ? 60 : projection.thresholdDays} días y no exista saldo previo No Devenga/Vencido.`
+      : 'Lógica vigente con datos originales, sin proyección.';
     const rows = [
-      ['CONTROL DE EJECUCIÓN – COMITÉ DE CARTERA'],
+      [`CONTROL DE EJECUCIÓN – ESCENARIO ${scenario}`],
       ['Fecha de procesamiento', new Date().toLocaleString('es-EC')],
+      ['Escenario', scenario],
+      ['Fecha base', baseDate.toLocaleDateString('es-EC')],
+      ['Fecha objetivo', targetDate.toLocaleDateString('es-EC')],
+      ['Horizonte (días)', scenario === 'PROYECTADO' ? projection.horizonDays : 0],
+      ['Umbral de migración', scenario === 'PROYECTADO' ? projection.thresholdDays : null],
+      ['Regla aplicada', ruleText],
       ['Período', periodLabel],
       ['Unidad monetaria', 'Miles'],
       [],
@@ -414,12 +428,13 @@
         metrics.noDevengaOver90.operations,
         metrics.chargedOff.value == null ? null : metrics.chargedOff.value / 1000,
         metrics.chargedOff.operations,
+        metrics.projection ? metrics.projection.reclassifiedOperations : 0,
         metrics.duplicatesExcluded,
         metrics.status,
         metrics.warnings.join(' | ')
       ]);
     });
-    return rows;
+    return { rows, headerRow: 12 };
   }
 
   async function build(templateBuffer, analyses, options) {
@@ -476,15 +491,17 @@
       nextRelIndex: Math.max(0, ...relIndexes)
     };
 
-    const control = controlMatrix(analyses, config.periodLabel(analyses[0].metrics.cutDate));
+    const controlInfo = controlMatrix(analyses, config.periodLabel(analyses[0].metrics.cutDate), config.control || {});
+    const control = controlInfo.rows;
+    const headerRow = controlInfo.headerRow;
     addWorksheet(zip, state, 'CONTROL_EJECUCION', worksheetXml(control, {
-      widths: [14, 16, 38, 17, 12, 17, 12, 17, 14, 18, 12, 17, 12, 17, 13, 19, 12, 52],
+      widths: [14, 17, 38, 17, 12, 17, 12, 17, 14, 18, 12, 17, 12, 17, 13, 16, 19, 12, 52],
       titleRows: [1],
-      headerRows: [6],
-      freezeRows: 6,
+      headerRows: [headerRow],
+      freezeRows: headerRow,
       freezeColumns: 1,
-      merge: 'A1:R1',
-      autoFilter: `A6:R${Math.max(6, control.length)}`
+      merge: 'A1:S1',
+      autoFilter: `A${headerRow}:S${Math.max(headerRow, control.length)}`
     }));
 
     for (const analysis of analyses) {

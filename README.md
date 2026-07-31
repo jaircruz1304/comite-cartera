@@ -1,55 +1,57 @@
-# Comité de Cartera – GitHub Pages V1.5
+# Comité de Cartera — Escenarios Normal y Proyectado
 
-Aplicación web local para procesar reportes `SaldosDeCarteraSencillo_Report`, aplicar las reglas del Comité de Cartera y generar un consolidado Excel a partir de una plantilla integrada en el repositorio.
+Aplicación estática para GitHub Pages que procesa localmente archivos `SaldosDeCarteraSencillo_Report.xlsx` y genera dos escenarios independientes a partir de una sola carga:
 
-## Cambios principales de la V1.5
+- **Normal:** aplica las reglas vigentes de Comité de Cartera.
+- **Proyectado:** incrementa `Dias Morosidad` y aplica una reclasificación parametrizable.
+- **Comparativo:** muestra variaciones por empresa y consolidado.
 
-- Se eliminó completamente `XlsxPopulate`, causante del error `Cannot read properties of undefined (reading 'attributes')`.
-- Se incorporó un motor OOXML propio basado en JSZip que modifica directamente una copia de la plantilla sin reconstruirla desde cero.
-- La descarga se genera y valida antes de habilitar el botón.
-- La plantilla está en `assets/COMITE_BASE.xlsx`; el usuario solo carga los reportes de saldos.
-- JSZip se incluye localmente en `vendor/jszip.min.js`.
-- El lector de reportes también usa OOXML y ya no depende de servicios externos.
-- El dashboard fue rediseñado con una interfaz ejecutiva, indicadores circulares, matriz de control y panel de auditoría.
-- El HTML presenta cifras monetarias en miles y sin decimales.
-- El Excel conserva dos decimales y el formato visual de la plantilla.
+Los archivos de cartera se procesan en la memoria del navegador. No se envían a GitHub ni a un servidor.
 
-## Flujo de uso
+## Parámetros por defecto validados
 
-1. Abrir la aplicación publicada en GitHub Pages.
-2. Cargar uno o varios reportes de saldos correspondientes a una sola fecha.
-3. Presionar **Procesar cartera**.
-4. Revisar los KPIs, indicadores por empresa y validaciones.
-5. Presionar **Descargar consolidado**.
+- Fecha base de referencia: **23-07-2026**.
+- Horizonte: **8 días**.
+- Fecha objetivo: **31-07-2026**.
+- Umbral: **días proyectados > 60**.
+- Reclasificación activada.
 
-## Archivo generado
+## Regla de proyección
 
-El archivo se denomina:
+Para cada fila real de detalle:
 
-`COMITE_Consolidado_AAAAMMDD_FINAL.xlsx`
+1. `Dias Morosidad proyectado = Dias Morosidad original + horizonte`.
+2. Si la operación está únicamente en **Cartera Por Vencer**, no tiene saldo previo en No Devenga ni Vencida, no está castigada y los días proyectados son mayores al umbral:
+   - Por Vencer 1–30 → Vencida 1–30.
+   - Por Vencer 31–90 → No Devenga 1–30.
+   - Por Vencer 91–180 → No Devenga 31–90.
+   - Por Vencer 181–360 → No Devenga 91–180.
+   - Por Vencer +360 → No Devenga 181–360.
+3. Operaciones que ya están en No Devenga o Vencida conservan sus saldos y solo actualizan días.
+4. El Total Cartera y la Cartera Castigada no se alteran.
 
-Contiene:
+La regla fue contrastada contra los cuatro archivos proyectados de referencia: **1.276 operaciones**, **37 reclasificaciones** y **0 diferencias** en días, saldos e indicadores.
 
-- `CTH`
-- `F12`
-- `F8`
-- `F11`
-- `CONTROL_EJECUCION`
-- Una hoja `ORIGEN_*` por cada empresa cargada
+## Salidas
+
+- `COMITE_Normal_YYYYMMDD_FINAL.xlsx`
+- `COMITE_Proyectado_YYYYMMDD_BASE_YYYYMMDD_FINAL.xlsx`
+
+Cada archivo parte de `assets/COMITE_BASE.xlsx`, mantiene hojas independientes por empresa, agrega `CONTROL_EJECUCION` y genera hojas `ORIGEN_*`.
 
 ## Publicación
 
-1. Copiar todo el contenido del paquete en la raíz del repositorio.
-2. Aceptar el reemplazo de los archivos anteriores.
-3. Confirmar que existan:
-   - `assets/COMITE_BASE.xlsx`
-   - `vendor/jszip.min.js`
-   - `js/ooxml.js`
-4. Hacer `Commit to main`.
-5. Hacer `Push origin`.
-6. Esperar que GitHub Actions termine correctamente.
-7. Abrir la página y presionar `Ctrl + F5`.
+1. Copiar todo el contenido de esta carpeta a la raíz del repositorio.
+2. Confirmar que `index.html` y `assets/COMITE_BASE.xlsx` estén en la raíz y subcarpeta indicadas.
+3. Hacer commit y push a `main`.
+4. Configurar **Settings → Pages → Source: GitHub Actions**.
+5. Esperar que la acción `Deploy to GitHub Pages` termine correctamente.
+6. Abrir la página y presionar `Ctrl + F5` después de actualizar.
 
-## Seguridad
+## Pruebas
 
-Los reportes seleccionados se procesan en la memoria del navegador. La plantilla integrada forma parte del repositorio, pero los archivos de cartera no se cargan automáticamente a GitHub.
+```bash
+npm test
+```
+
+Las pruebas verifican reglas normales, proyección, generación OOXML, plantilla integrada y estructura del repositorio.

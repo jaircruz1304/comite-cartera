@@ -133,6 +133,7 @@
       sold: findHeaderIndex(headers, (h) => h.includes('CARTERA ENAJENACION')),
       premium: findHeaderIndex(headers, (h) => h.includes('VALOR PREMIO')),
       active: [],
+      current: [],
       noDevenga: [],
       overdue: []
     };
@@ -145,6 +146,7 @@
       const isOverdueBalance = group.includes('CARTERA VENCIDA') && header.includes('SALDO VENCIDO');
 
       if (isMaturingBalance || isNoAccrualBalance || isOverdueBalance) result.active.push(c);
+      if (isMaturingBalance) result.current.push(c);
       if (isNoAccrualBalance) result.noDevenga.push(c);
       if (isOverdueBalance) result.overdue.push(c);
     }
@@ -159,6 +161,7 @@
     if (columns.daysPastDue < 0) missing.push('Dias Morosidad');
     if (columns.chargedOff < 0) missing.push('Cartera Castigada');
     if (!columns.active.length) missing.push('grupos de cartera activa');
+    if (!columns.current.length) missing.push('Cartera Por Vencer');
     if (!columns.noDevenga.length) missing.push('Cartera que no devenga Intereses');
     if (!columns.overdue.length) missing.push('Cartera Vencida');
     if (missing.length) throw new Error(`Columnas o grupos requeridos no encontrados: ${missing.join(', ')}`);

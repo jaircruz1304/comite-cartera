@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Procesamiento local y consolidación de reportes del Comité de Cartera.">
-  <title>Comité de Cartera | Centro de Control</title>
+  <meta name="description" content="Procesamiento local de escenarios normal y proyectado para el Comité de Cartera.">
+  <title>Comité de Cartera | Escenarios</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
         <div>
           <span class="brand-kicker">CENTRO DE CONTROL FINANCIERO</span>
           <h1>Comité de Cartera</h1>
-          <p>Consolidación, validación y trazabilidad de reportes</p>
+          <p>Escenario real, proyección parametrizable y comparación ejecutiva</p>
         </div>
       </div>
       <div class="security-chip"><span></span>Procesamiento local y privado</div>
@@ -25,23 +25,14 @@
   <main class="shell">
     <section class="executive-hero">
       <div class="hero-copy">
-        <span class="section-kicker">OPERACIÓN DIARIA</span>
-        <h2>Transforma los reportes de saldos en un consolidado listo para comité</h2>
-        <p>La aplicación aplica las reglas de negocio validadas, utiliza la plantilla integrada del repositorio y genera una copia nueva por fecha de corte.</p>
+        <span class="section-kicker">ANÁLISIS DE ESCENARIOS</span>
+        <h2>Una sola carga, dos lecturas de cartera</h2>
+        <p>El escenario Normal conserva la lógica vigente. El escenario Proyectado incrementa los días de morosidad y aplica la migración parametrizada sin alterar los archivos originales.</p>
       </div>
       <div class="system-grid" aria-label="Estado del sistema">
-        <article class="system-card">
-          <span>Plantilla</span>
-          <strong id="templateRepoStatus">Verificando…</strong>
-        </article>
-        <article class="system-card">
-          <span>Motores</span>
-          <strong id="runtimeStatus">Verificando…</strong>
-        </article>
-        <article class="system-card">
-          <span>Última salida</span>
-          <strong id="lastOutputLabel">Aún no generada</strong>
-        </article>
+        <article class="system-card"><span>Plantilla</span><strong id="templateRepoStatus">Verificando…</strong></article>
+        <article class="system-card"><span>Motores</span><strong id="runtimeStatus">Verificando…</strong></article>
+        <article class="system-card"><span>Última salida</span><strong id="lastOutputLabel">Aún no generada</strong></article>
       </div>
     </section>
 
@@ -50,19 +41,17 @@
         <div class="panel-heading">
           <div>
             <span class="section-kicker">PASO 1</span>
-            <h3>Cargar reportes de saldos</h3>
-            <p>Selecciona CTH, F12, F8 y F11 correspondientes a la misma fecha de corte.</p>
+            <h3>Cargar reportes originales</h3>
+            <p>Selecciona CTH, F12, F8 y F11 correspondientes a una misma fecha base.</p>
           </div>
           <div class="count-chip"><span id="fileCountBadge">0</span> archivos</div>
         </div>
 
         <label class="drop-zone" id="sourceDrop" for="sourceInput">
           <input id="sourceInput" type="file" accept=".xlsx" multiple>
-          <div class="upload-visual" aria-hidden="true">
-            <span>↑</span>
-          </div>
+          <div class="upload-visual" aria-hidden="true"><span>↑</span></div>
           <strong>Arrastra aquí los reportes o haz clic para seleccionarlos</strong>
-          <small>Formato admitido: .xlsx · Máximo recomendado: 25 MB por archivo</small>
+          <small>Los archivos permanecen en la memoria de este navegador.</small>
         </label>
         <p class="file-status" id="sourceStatus">Selecciona uno o varios reportes de saldos.</p>
         <ul class="file-list" id="sourceList"></ul>
@@ -70,22 +59,47 @@
 
       <aside class="operation-panel">
         <span class="section-kicker">PASO 2</span>
-        <h3>Ejecutar consolidación</h3>
-        <p>Se procesan las empresas de manera independiente y se crea un archivo nuevo sin alterar la plantilla base.</p>
+        <h3>Ejecutar los dos escenarios</h3>
+        <p>El sistema genera dos consolidaciones independientes y una vista comparativa.</p>
 
         <div class="rule-list">
-          <div><span>01</span><p>No mezclar empresas ni fechas</p></div>
-          <div><span>02</span><p>Excluir totales, duplicados y castigados</p></div>
-          <div><span>03</span><p>No Devenga solo desde sus columnas</p></div>
-          <div><span>04</span><p>Valores monetarios expresados en miles</p></div>
+          <div><span>01</span><p>Normal: datos originales y reglas vigentes</p></div>
+          <div><span>02</span><p>Proyectado: días + horizonte configurado</p></div>
+          <div><span>03</span><p>Migración solo al superar el umbral</p></div>
+          <div><span>04</span><p>Excel y dashboard separados por escenario</p></div>
         </div>
 
         <div class="button-stack">
-          <button class="button button-primary" id="processButton" disabled>Procesar cartera</button>
-          <button class="button button-success" id="downloadButton" disabled>Descargar consolidado</button>
+          <button class="button button-primary" id="processButton" disabled>Procesar escenarios</button>
+          <div class="download-split">
+            <button class="button button-success" id="downloadNormalButton" disabled>Descargar Normal</button>
+            <button class="button button-projected" id="downloadProjectedButton" disabled>Descargar Proyectado</button>
+          </div>
           <button class="button button-ghost" id="resetButton">Limpiar sesión</button>
         </div>
       </aside>
+    </section>
+
+    <section class="projection-panel">
+      <div class="projection-heading">
+        <div>
+          <span class="section-kicker">PARÁMETROS DE PROYECCIÓN</span>
+          <h3>Configurar escenario Proyectado</h3>
+          <p>Valores de referencia validados: fecha base 23-07-2026, horizonte 8 días y umbral mayor a 60 días.</p>
+        </div>
+        <span class="parameter-status" id="projectionStatus">Pendiente de procesar</span>
+      </div>
+      <div class="parameter-grid">
+        <label><span>Horizonte</span><div class="input-unit"><input id="horizonDays" type="number" min="0" max="365" step="1" value="8"><em>días</em></div></label>
+        <label><span>Umbral de migración</span><div class="input-unit"><input id="thresholdDays" type="number" min="0" max="3650" step="1" value="60"><em>días</em></div></label>
+        <label><span>Fecha base</span><output id="baseDateOutput">Se detectará desde los archivos</output></label>
+        <label><span>Fecha objetivo</span><output id="targetDateOutput">Se calculará automáticamente</output></label>
+        <label class="toggle-field"><input id="reclassifyToggle" type="checkbox" checked><span class="toggle-control"></span><span><strong>Aplicar reclasificación</strong><small>Por Vencer → No Devenga/Vencida al superar el umbral.</small></span></label>
+      </div>
+      <div class="projection-rule">
+        <strong>Regla parametrizada</strong>
+        <p>Cuando una operación se encuentra únicamente en Cartera Por Vencer y sus días proyectados son mayores al umbral: C → Vencida 1–30; D → ND 1–30; E → ND 31–90; F → ND 91–180; G → ND 181–360.</p>
+      </div>
     </section>
 
     <section class="progress-panel" id="progressPanel" hidden>
@@ -99,70 +113,85 @@
     <div class="message" id="messageArea" hidden></div>
 
     <section class="dashboard empty" id="dashboard">
-      <div class="dashboard-header">
+      <div class="dashboard-header dashboard-header-scenarios">
         <div>
           <span class="section-kicker">RESULTADOS EJECUTIVOS</span>
-          <h2>Resumen del corte</h2>
-          <p>Valores monetarios mostrados en miles y sin decimales en pantalla.</p>
+          <h2 id="dashboardScenarioTitle">Escenario Normal</h2>
+          <p id="dashboardScenarioDescription">Valores monetarios expresados en miles y sin decimales en pantalla.</p>
         </div>
         <div class="dashboard-controls">
-          <div class="date-chip"><span>Fecha de corte</span><strong id="cutDateLabel">—</strong></div>
-          <label>Empresa
+          <div class="scenario-tabs" role="tablist" aria-label="Escenarios">
+            <button class="scenario-tab active" data-scenario="NORMAL">Normal</button>
+            <button class="scenario-tab" data-scenario="PROYECTADO">Proyectado</button>
+            <button class="scenario-tab" data-scenario="COMPARATIVO">Comparativo</button>
+          </div>
+          <div class="date-chip"><span id="dateChipLabel">Fecha de corte</span><strong id="cutDateLabel">—</strong></div>
+          <label id="companyFilterLabel">Empresa
             <select id="companyFilter"><option value="ALL">Todas las empresas</option></select>
           </label>
         </div>
       </div>
 
-      <div class="kpi-grid" id="kpiGrid"></div>
+      <div id="scenarioDashboard">
+        <div class="kpi-grid" id="kpiGrid"></div>
 
-      <section class="dashboard-section">
-        <div class="section-heading">
-          <div><span class="section-kicker">LECTURA POR EMPRESA</span><h3>Indicadores de exposición</h3></div>
-          <div class="legend"><span class="legend-green"></span>Bajo <span class="legend-yellow"></span>Atención <span class="legend-red"></span>Crítico</div>
-        </div>
-        <div class="company-cards" id="companyCards"></div>
-      </section>
-
-      <section class="dashboard-grid">
-        <article class="dashboard-section table-section">
-          <div class="section-heading"><div><span class="section-kicker">MATRIZ DE CONTROL</span><h3>Detalle consolidado</h3></div></div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Empresa</th>
-                  <th>Total cartera</th>
-                  <th>Operaciones</th>
-                  <th>Vencida</th>
-                  <th>No Devenga</th>
-                  <th>ND 60–90</th>
-                  <th>ND +90</th>
-                  <th>Castigada</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody id="summaryTableBody"><tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr></tbody>
-            </table>
+        <section class="dashboard-section">
+          <div class="section-heading">
+            <div><span class="section-kicker">LECTURA POR EMPRESA</span><h3>Indicadores de exposición</h3></div>
+            <div class="legend"><span class="legend-green"></span>Bajo <span class="legend-yellow"></span>Atención <span class="legend-red"></span>Crítico</div>
           </div>
-        </article>
+          <div class="company-cards" id="companyCards"></div>
+        </section>
 
-        <article class="dashboard-section validation-section">
-          <div class="section-heading"><div><span class="section-kicker">AUDITORÍA</span><h3>Validaciones y alertas</h3></div></div>
-          <ul class="validation-list" id="validationList"><li class="validation-info"><span></span>La validación aparecerá al finalizar.</li></ul>
-        </article>
-      </section>
+        <section class="dashboard-grid">
+          <article class="dashboard-section table-section">
+            <div class="section-heading"><div><span class="section-kicker">MATRIZ DE CONTROL</span><h3>Detalle del escenario</h3></div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Empresa</th><th>Total cartera</th><th>Operaciones</th><th>Vencida</th><th>No Devenga</th><th>ND 60–90</th><th>ND +90</th><th>Castigada</th><th>Estado</th></tr></thead>
+                <tbody id="summaryTableBody"><tr><td colspan="9" class="placeholder-cell">Sin resultados procesados.</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="dashboard-section validation-section">
+            <div class="section-heading"><div><span class="section-kicker">AUDITORÍA</span><h3>Validaciones y alertas</h3></div></div>
+            <ul class="validation-list" id="validationList"><li class="validation-info"><span></span>La validación aparecerá al finalizar.</li></ul>
+          </article>
+        </section>
+      </div>
+
+      <div id="comparisonDashboard" hidden>
+        <div class="comparison-kpis" id="comparisonKpis"></div>
+        <section class="dashboard-grid comparison-grid">
+          <article class="dashboard-section table-section">
+            <div class="section-heading"><div><span class="section-kicker">VARIACIÓN POR EMPRESA</span><h3>Normal frente a Proyectado</h3></div></div>
+            <div class="table-wrap">
+              <table class="comparison-table">
+                <thead><tr><th>Empresa</th><th>Total Normal</th><th>Total Proyectado</th><th>Δ Vencida</th><th>Δ No Devenga</th><th>Δ ND 60–90</th><th>Δ ND +90</th><th>Reclasificadas</th></tr></thead>
+                <tbody id="comparisonTableBody"></tbody>
+              </table>
+            </div>
+          </article>
+          <article class="dashboard-section validation-section">
+            <div class="section-heading"><div><span class="section-kicker">TRAZABILIDAD DE PROYECCIÓN</span><h3>Parámetros y migraciones</h3></div></div>
+            <ul class="validation-list" id="projectionAuditList"></ul>
+          </article>
+        </section>
+      </div>
     </section>
 
     <section class="privacy-note">
       <div class="privacy-shield" aria-hidden="true">✓</div>
-      <div><strong>Privacidad por diseño</strong><p>Los archivos se procesan en la memoria del navegador. Los reportes de cartera no se cargan al repositorio ni se transmiten a un servidor.</p></div>
+      <div><strong>Privacidad por diseño</strong><p>Los archivos se procesan en la memoria del navegador. Los reportes no se cargan al repositorio ni se transmiten a un servidor.</p></div>
     </section>
   </main>
 
-  <footer><span>Comité de Cartera</span><span>Versión 1.5.0 · Motor OOXML estable</span></footer>
+  <footer><span>Comité de Cartera</span><span>Versión 1.6.0 · Escenarios Normal y Proyectado</span></footer>
 
   <script src="vendor/jszip.min.js"></script>
   <script src="js/processor.js"></script>
+  <script src="js/projection.js"></script>
   <script src="js/ooxml.js"></script>
   <script src="js/app.js"></script>
 </body>
