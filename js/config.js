@@ -1,5 +1,5 @@
 window.APP_CONFIG = Object.freeze({
-  githubOwner: 'TU_USUARIO',
+  githubOwner: 'jaircruz1304',
   githubRepo: 'comite-cartera',
   githubBranch: 'main',
   githubSourcePath: 'sources/current',
