@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "2.0",
+  "sources": [
+    {
+      "id": "hist-2025-12",
+      "name": "Cartera Directorio DICIEMBRE 2025.xlsx",
+      "period": "2025-12",
+      "sourceType": "historical_consolidated",
+      "storage": "google_drive",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1mJsSSYjGYcYu26YGX0dCGXS7ubLFsqpQ?usp=sharing",
+      "directDownloadUrl": null,
+      "granularity": "monthly_consolidated",
+      "priority": 1,
+      "companies": [
+        "CTH",
+        "F8",
+        "F11",
+        "F12"
+      ]
+    },
+    {
+      "id": "hist-2026-07",
+      "name": "Cartera Directorio JULIO 2026.xlsx",
+      "period": "2026-07",
+      "sourceType": "historical_consolidated",
+      "storage": "google_drive",
+      "driveFolderUrl": "https://drive.google.com/drive/folders/1mJsSSYjGYcYu26YGX0dCGXS7ubLFsqpQ?usp=sharing",
+      "directDownloadUrl": null,
+      "granularity": "monthly_consolidated",
+      "priority": 2,
+      "companies": [
+        "CTH",
+        "F8",
+        "F11",
+        "F12"
+      ]
+    }
+  ]
+}

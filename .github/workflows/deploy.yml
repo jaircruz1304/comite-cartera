@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Build operational catalog
+        run: node scripts/build-operational-catalog.js
       - name: Run automated tests
         run: npm test
       - name: Setup Pages

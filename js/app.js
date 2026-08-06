@@ -4,6 +4,8 @@
   const P = window.PortfolioProcessor;
   const R = window.ProjectionEngine;
   const X = window.OOXMLWorkbook;
+  const D = window.DriveConnector;
+  const PDF = window.PDFReport;
 
   const state = {
     templateBuffer: null,
@@ -19,7 +21,12 @@
     selectedScenario: 'NORMAL',
     baseDate: null,
     targetDate: null,
-    projectionParams: null
+    projectionParams: null,
+    logoDataUrl: null,
+    sourceMode: 'LOCAL',
+    driveFiles: [],
+    driveSelectedIds: new Set(),
+    driveFolderId: ''
   };
 
   const els = {};
@@ -46,14 +53,19 @@
   function cacheElements() {
     [
       'sourceInput', 'sourceDrop', 'sourceStatus', 'sourceList', 'processButton',
-      'downloadNormalButton', 'downloadProjectedButton', 'resetButton', 'progressPanel',
+      'downloadNormalButton', 'downloadProjectedButton', 'downloadNormalEnterpriseButton', 'downloadProjectedEnterpriseButton', 'resetButton', 'progressPanel',
       'progressText', 'processSteps', 'messageArea', 'dashboard', 'companyFilter',
       'companyFilterLabel', 'summaryTableBody', 'companyCards',
       'cutDateLabel', 'dateChipLabel', 'fileCountBadge', 'templateRepoStatus',
       'runtimeStatus', 'lastOutputLabel', 'horizonDays', 'thresholdDays',
       'reclassifyToggle', 'baseDateOutput', 'targetDateOutput', 'projectionStatus',
       'dashboardScenarioTitle', 'dashboardScenarioDescription', 'scenarioDashboard',
-      'comparisonDashboard', 'comparisonKpis', 'comparisonTableBody'
+      'comparisonDashboard', 'comparisonKpis', 'comparisonTableBody',
+      'sourceModeLocal', 'sourceModeDrive', 'sourceModeStatus', 'modeHeaderChip',
+      'localSourcePanel', 'driveSourcePanel', 'driveConnectButton', 'driveDisconnectButton',
+      'driveConnectionStatus', 'driveConnectionDetail', 'driveStatusDot', 'driveFolderInput',
+      'driveScanButton', 'driveAutoSelectButton', 'driveImportButton', 'driveConfigNotice',
+      'driveFileTableBody', 'privacyText'
     ].forEach((id) => { els[id] = document.getElementById(id); });
   }
 
@@ -62,6 +74,16 @@
     els.processButton.addEventListener('click', processFiles);
     els.downloadNormalButton.addEventListener('click', () => downloadBlob(state.normalOutputBlob, state.normalOutputName));
     els.downloadProjectedButton.addEventListener('click', () => downloadBlob(state.projectedOutputBlob, state.projectedOutputName));
+    els.downloadNormalEnterpriseButton.addEventListener('click', () => downloadEnterprisePdf('NORMAL'));
+    els.downloadProjectedEnterpriseButton.addEventListener('click', () => downloadEnterprisePdf('PROYECTADO'));
+    els.sourceModeLocal.addEventListener('click', () => setSourceMode('LOCAL'));
+    els.sourceModeDrive.addEventListener('click', () => setSourceMode('DRIVE'));
+    els.driveConnectButton.addEventListener('click', connectDrive);
+    els.driveDisconnectButton.addEventListener('click', disconnectDrive);
+    els.driveScanButton.addEventListener('click', scanDriveFolder);
+    els.driveAutoSelectButton.addEventListener('click', autoSelectDriveFiles);
+    els.driveImportButton.addEventListener('click', importSelectedDriveFiles);
+    els.driveFolderInput.addEventListener('change', () => { state.driveFolderId = els.driveFolderInput.value.trim(); });
     els.resetButton.addEventListener('click', resetSession);
     els.companyFilter.addEventListener('change', (event) => {
       state.selectedCompany = event.target.value;
@@ -81,6 +103,7 @@
       });
     });
     setupDropZone(els.sourceDrop, addSourceFiles);
+    initializeSourceModes();
   }
 
   function checkRuntime() {
@@ -94,7 +117,8 @@
       console.error('Componentes no disponibles:', missing);
       showMessage('error', 'La aplicación no pudo iniciar correctamente. Actualiza la página con Ctrl+F5.');
     } else {
-      els.runtimeStatus.textContent = 'Motores locales listos';
+      const pdfReady = Boolean(PDF && PDF.available && PDF.available());
+      els.runtimeStatus.textContent = pdfReady ? 'Motores locales y PDF listos' : 'Motores locales listos · PDF requiere conexión';
     }
   }
 
@@ -116,6 +140,166 @@
       showMessage('error', 'No fue posible preparar la plantilla integrada. Actualiza la página e inténtalo nuevamente.');
     }
     updateFilesUI();
+  }
+
+  function initializeSourceModes() {
+    const configured = Boolean(D && D.isConfigured && D.isConfigured());
+    els.driveFolderInput.value = D && D.getDefaultFolderId ? D.getDefaultFolderId() : '';
+    state.driveFolderId = els.driveFolderInput.value;
+    els.driveConfigNotice.hidden = configured;
+    els.driveConnectButton.disabled = !configured;
+    els.driveConnectionDetail.textContent = configured
+      ? 'Acceso público de solo lectura, sin credenciales en el navegador.'
+      : 'Complete githubOwner y githubRepo en js/config.js para habilitar esta modalidad.';
+    setSourceMode(configured ? 'DRIVE' : 'LOCAL', { preserveFiles: true, force: true });
+  }
+
+  function setSourceMode(mode, options = {}) {
+    const normalized = mode === 'DRIVE' ? 'DRIVE' : 'LOCAL';
+    if (state.sourceMode === normalized && !options.force) return;
+    state.sourceMode = normalized;
+    if (!options.preserveFiles) {
+      state.sourceFiles = [];
+      els.sourceInput.value = '';
+      invalidateOutputs();
+    }
+    const drive = normalized === 'DRIVE';
+    els.localSourcePanel.hidden = drive;
+    els.driveSourcePanel.hidden = !drive;
+    els.sourceModeLocal.classList.toggle('active', !drive);
+    els.sourceModeDrive.classList.toggle('active', drive);
+    els.sourceModeLocal.setAttribute('aria-selected', String(!drive));
+    els.sourceModeDrive.setAttribute('aria-selected', String(drive));
+    els.sourceModeStatus.textContent = drive ? 'Modo GitHub activo' : 'Modo local activo';
+    els.modeHeaderChip.innerHTML = drive ? '<i></i>Procesamiento desde GitHub' : '<i></i>Procesamiento local';
+    els.privacyText.textContent = drive
+      ? 'Los archivos se descargan desde GitHub a la memoria de esta sesión y no se almacenan en servidores de la aplicación.'
+      : 'Los archivos se procesan únicamente en la memoria del navegador y no se transmiten a servidores externos.';
+    updateFilesUI();
+    renderEmptyDashboard();
+  }
+
+  async function connectDrive() {
+    clearMessage();
+    try {
+      if (!D || !D.isConfigured || !D.isConfigured()) throw new Error('GitHub no está configurado. Completa js/config.js.');
+      setDriveStatus('connecting', 'Conectando con GitHub…', 'Consultando el repositorio público configurado.');
+      await D.connect();
+      setDriveStatus('connected', 'GitHub conectado', 'Repositorio público disponible en modo de solo lectura.');
+      els.driveConnectButton.hidden = true;
+      els.driveDisconnectButton.hidden = false;
+      els.driveScanButton.disabled = false;
+      showMessage('success', 'Conexión con GitHub establecida. Busque la ruta operativa configurada.');
+    } catch (error) {
+      console.error(error);
+      setDriveStatus('error', 'No se pudo conectar GitHub', String(error.message || error));
+      showMessage('error', String(error.message || 'No se pudo conectar con GitHub.'));
+    }
+  }
+
+  async function disconnectDrive() {
+    try { if (D && D.disconnect) await D.disconnect(); } catch (error) {}
+    state.driveFiles = [];
+    state.driveSelectedIds = new Set();
+    renderDriveFiles();
+    setDriveStatus('idle', 'GitHub no conectado', 'Conecte nuevamente para consultar el repositorio.');
+    els.driveConnectButton.hidden = false;
+    els.driveDisconnectButton.hidden = true;
+    els.driveScanButton.disabled = true;
+    els.driveAutoSelectButton.disabled = true;
+    els.driveImportButton.disabled = true;
+  }
+
+  function setDriveStatus(tone, title, detail) {
+    els.driveConnectionStatus.textContent = title;
+    els.driveConnectionDetail.textContent = detail;
+    els.driveStatusDot.classList.toggle('connected', tone === 'connected');
+    els.driveStatusDot.classList.toggle('error', tone === 'error');
+  }
+
+  async function scanDriveFolder() {
+    clearMessage();
+    try {
+      state.driveFolderId = els.driveFolderInput.value.trim();
+      if (!state.driveFolderId) throw new Error('Ingrese la ruta de la carpeta en GitHub.');
+      els.driveScanButton.disabled = true;
+      els.driveScanButton.textContent = 'Buscando…';
+      const result = await D.listFolderFiles(state.driveFolderId);
+      state.driveFolderId = result.folderId;
+      state.driveFiles = result.files || [];
+      state.driveSelectedIds = new Set();
+      autoSelectDriveFiles(false);
+      renderDriveFiles();
+      showMessage('success', `${state.driveFiles.length} reporte(s) localizado(s) en la carpeta de Drive.`);
+    } catch (error) {
+      console.error(error);
+      showMessage('error', String(error.message || 'No se pudo consultar la carpeta de Drive.'));
+      if (/sesión|venció|401/i.test(String(error.message || ''))) await disconnectDrive();
+    } finally {
+      els.driveScanButton.disabled = !(D && D.isConnected && D.isConnected());
+      els.driveScanButton.textContent = 'Buscar reportes';
+    }
+  }
+
+  function autoSelectDriveFiles(render = true) {
+    if (!state.driveFiles.length) return;
+    const selected = D.chooseLatestPerCompany(state.driveFiles, P.detectCompany);
+    state.driveSelectedIds = new Set(selected.map((file) => file.id));
+    if (render) renderDriveFiles();
+  }
+
+  function renderDriveFiles() {
+    if (!state.driveFiles.length) {
+      els.driveFileTableBody.innerHTML = '<tr><td colspan="5" class="placeholder-cell">No se han localizado reportes en la carpeta.</td></tr>';
+      els.driveAutoSelectButton.disabled = true;
+      els.driveImportButton.disabled = true;
+      return;
+    }
+    els.driveFileTableBody.innerHTML = state.driveFiles.map((file) => {
+      let company = '—';
+      try { company = P.detectCompany(file.name, null).code; } catch (error) {}
+      const selected = state.driveSelectedIds.has(file.id);
+      return `<tr class="${selected ? 'selected' : ''}">
+        <td><input type="checkbox" data-drive-id="${escapeHtml(file.id)}" ${selected ? 'checked' : ''}></td>
+        <td><span class="drive-company-chip">${escapeHtml(company)}</span></td>
+        <td><strong>${escapeHtml(file.name)}</strong></td>
+        <td>${escapeHtml(new Date(file.modifiedTime).toLocaleString('es-EC'))}</td>
+        <td>${formatBytes(Number(file.size || 0))}</td>
+      </tr>`;
+    }).join('');
+    els.driveFileTableBody.querySelectorAll('[data-drive-id]').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) state.driveSelectedIds.add(checkbox.dataset.driveId);
+        else state.driveSelectedIds.delete(checkbox.dataset.driveId);
+        renderDriveFiles();
+      });
+    });
+    els.driveAutoSelectButton.disabled = false;
+    els.driveImportButton.disabled = state.driveSelectedIds.size === 0;
+  }
+
+  async function importSelectedDriveFiles() {
+    const selected = state.driveFiles.filter((file) => state.driveSelectedIds.has(file.id));
+    if (!selected.length) return;
+    clearMessage();
+    els.driveImportButton.disabled = true;
+    const originalText = els.driveImportButton.textContent;
+    try {
+      const files = await D.downloadFiles(selected, (index, total, current) => {
+        els.driveImportButton.textContent = current ? `Descargando ${index + 1}/${total}` : 'Finalizando…';
+      });
+      state.sourceFiles = files;
+      invalidateOutputs();
+      updateFilesUI();
+      renderEmptyDashboard();
+      showMessage('success', `${files.length} archivo(s) de Drive preparados para procesar.`);
+    } catch (error) {
+      console.error(error);
+      showMessage('error', String(error.message || 'No se pudieron descargar los archivos de Drive.'));
+    } finally {
+      els.driveImportButton.textContent = originalText;
+      els.driveImportButton.disabled = state.driveSelectedIds.size === 0;
+    }
   }
 
   function setupDropZone(element, callback) {
@@ -182,8 +366,8 @@
 
   function updateFilesUI() {
     els.sourceStatus.textContent = state.sourceFiles.length
-      ? `${state.sourceFiles.length} archivo(s) preparados para procesar.`
-      : 'Selecciona uno o varios reportes de saldos.';
+      ? `${state.sourceFiles.length} archivo(s) preparados para procesar${state.sourceMode === 'DRIVE' ? ' desde Drive' : ''}.`
+      : (state.sourceMode === 'DRIVE' ? 'Conecta Drive, selecciona los reportes y cárgalos en la sesión.' : 'Selecciona uno o varios reportes de saldos.');
     els.sourceDrop.classList.toggle('ready', state.sourceFiles.length > 0);
     els.fileCountBadge.textContent = String(state.sourceFiles.length);
     els.sourceList.innerHTML = '';
@@ -203,8 +387,11 @@
     els.processButton.disabled = !(state.templateReady && state.sourceFiles.length && runtimeReady);
     els.downloadNormalButton.disabled = !state.normalOutputBlob;
     els.downloadProjectedButton.disabled = !state.projectedOutputBlob;
+    const pdfReady = Boolean(PDF && PDF.available && PDF.available());
+    els.downloadNormalEnterpriseButton.disabled = !state.normalAnalyses.length || !pdfReady;
+    els.downloadProjectedEnterpriseButton.disabled = !state.projectedAnalyses.length || !pdfReady;
     const outputs = [state.normalOutputName, state.projectedOutputName].filter(Boolean);
-    els.lastOutputLabel.textContent = outputs.length ? `${outputs.length} archivos listos` : 'Aún no se han generado salidas';
+    els.lastOutputLabel.textContent = outputs.length ? '4 archivos disponibles' : 'Aún no se han generado salidas';
   }
 
   function readProjectionParams() {
@@ -524,6 +711,9 @@
     els.resetButton.disabled = isBusy;
     els.downloadNormalButton.disabled = isBusy || !state.normalOutputBlob;
     els.downloadProjectedButton.disabled = isBusy || !state.projectedOutputBlob;
+    const pdfReady = Boolean(PDF && PDF.available && PDF.available());
+    els.downloadNormalEnterpriseButton.disabled = isBusy || !state.normalAnalyses.length || !pdfReady;
+    els.downloadProjectedEnterpriseButton.disabled = isBusy || !state.projectedAnalyses.length || !pdfReady;
     if (!isBusy) renderProcessSteps(0);
   }
 
@@ -539,12 +729,87 @@
     window.setTimeout(() => URL.revokeObjectURL(url), 3000);
   }
 
+  async function downloadEnterprisePdf(scenario) {
+    const projected = scenario === 'PROYECTADO';
+    const analyses = projected ? state.projectedAnalyses : state.normalAnalyses;
+    if (!analyses.length) return;
+
+    try {
+      if (!PDF || !PDF.available || !PDF.available()) {
+        throw new Error('El motor PDF no está disponible. Verifica la conexión a Internet y actualiza la página.');
+      }
+      const logoDataUrl = await getEmbeddedLogoDataUrl();
+      const reportDate = projected ? state.targetDate : state.baseDate;
+      const payload = {
+        scenario,
+        scenarioLabel: projected ? 'Escenario Proyectado' : 'Escenario Normal',
+        subtitle: projected
+          ? `Proyección a ${state.projectionParams.horizonDays} días · Umbral > ${state.projectionParams.thresholdDays}`
+          : 'Resultados obtenidos directamente de los archivos originales',
+        dateLabel: projected ? 'Fecha objetivo' : 'Fecha de corte',
+        dateValue: formatDate(reportDate),
+        baseDate: formatDate(state.baseDate),
+        targetDate: formatDate(state.targetDate),
+        horizonDays: projected ? state.projectionParams.horizonDays : 0,
+        thresholdDays: projected ? state.projectionParams.thresholdDays : null,
+        logoDataUrl,
+        generatedAt: new Date().toLocaleString('es-EC'),
+        rows: analyses.map(({ metrics, projection }) => ({
+          company: metrics.company,
+          total: metrics.total.value,
+          operations: metrics.total.operations,
+          overdue: metrics.overdue.value,
+          overdueOperations: metrics.overdue.operations,
+          noDevenga: metrics.noDevenga.value,
+          noDevengaOperations: metrics.noDevenga.operations,
+          noDevenga6090: metrics.noDevenga6090.value,
+          noDevengaOver90: metrics.noDevengaOver90.value,
+          chargedOff: metrics.chargedOff.value || 0,
+          chargedOffOperations: metrics.chargedOff.operations || 0,
+          reclassified: projection?.reclassifiedOperations || 0,
+          status: metrics.status || 'OK'
+        }))
+      };
+      showMessage('success', `Generando PDF Enterprise ${projected ? 'Proyectado' : 'Normal'}…`);
+      const blob = await PDF.generate(payload);
+      const keyDate = P.fileDateKey(reportDate);
+      const name = `COMITE_Enterprise_${projected ? 'Proyectado' : 'Normal'}_${keyDate}.pdf`;
+      downloadBlob(blob, name);
+      showMessage('success', `PDF Enterprise ${projected ? 'Proyectado' : 'Normal'} generado directamente y validado.`);
+    } catch (error) {
+      console.error('No se pudo generar el PDF Enterprise:', error);
+      showMessage('error', String(error.message || 'No fue posible generar el PDF Enterprise.'));
+    }
+  }
+
+  async function getEmbeddedLogoDataUrl() {
+    if (state.logoDataUrl) return state.logoDataUrl;
+    try {
+      const response = await fetch('assets/logo_CTH.png', { cache: 'force-cache' });
+      if (!response.ok) return '';
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let binary = '';
+      const chunk = 0x8000;
+      for (let index = 0; index < bytes.length; index += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
+      }
+      state.logoDataUrl = `data:image/png;base64,${btoa(binary)}`;
+      return state.logoDataUrl;
+    } catch (error) {
+      console.warn('No se pudo incrustar el logo en el PDF:', error);
+      return '';
+    }
+  }
+
   function resetSession() {
     state.sourceFiles = [];
     invalidateOutputs();
     state.selectedCompany = 'ALL';
     state.selectedScenario = 'NORMAL';
+    state.driveFiles = [];
+    state.driveSelectedIds = new Set();
     els.sourceInput.value = '';
+    renderDriveFiles();
     document.querySelectorAll('.scenario-tab').forEach((item) => item.classList.toggle('active', item.dataset.scenario === 'NORMAL'));
     clearMessage();
     updateFilesUI();
@@ -615,6 +880,8 @@
     if (/duplicad|empresa/i.test(message)) return message;
     if (/límite|tamaño|archivo/i.test(message)) return message;
     if (/90 segundos|superó/i.test(message)) return 'El procesamiento tardó más de lo esperado. Reduce el número de archivos o vuelve a intentarlo.';
+    if (/drive|google|oauth|sesión/i.test(message)) return message;
+    if (/pdf/i.test(message)) return 'No fue posible generar el PDF Enterprise. Verifica la conexión y vuelve a intentarlo.';
     if (/xlsx|excel|plantilla|paquete/i.test(message)) return 'No fue posible generar el archivo Excel. Verifica los reportes cargados y vuelve a intentarlo.';
     return 'No se pudo completar el procesamiento. Revisa los archivos y vuelve a intentarlo.';
   }

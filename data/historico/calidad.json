@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "2.0",
+  "formulaErrors": [
+    {
+      "source": "Cartera Directorio DICIEMBRE 2025.xlsx",
+      "sheet": "CTH",
+      "period": "2015-06",
+      "metric": "CARTERA_CASTIGADA",
+      "field": "value",
+      "error": "#REF!"
+    }
+  ],
+  "conflicts": [],
+  "missingCompanyPeriods": []
+}

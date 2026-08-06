@@ -1,9 +1,9 @@
 {
   "name": "comite-cartera-github-pages",
-  "version": "1.7.1",
+  "version": "2.0.0",
   "private": true,
-  "description": "Procesador local CTH de escenarios Normal y Proyectado con interfaz ejecutiva.",
+  "description": "Comité de Cartera CTH con fuente operativa GitHub, carga local, escenarios Normal/Proyectado e histórico consolidado.",
   "scripts": {
-    "test": "node tests/processor-smoke.js && node tests/projection-smoke.js && node tests/ooxml-smoke.js && node tests/repository-smoke.js"
+    "test": "node tests/processor-smoke.js && node tests/projection-smoke.js && node tests/ooxml-smoke.js && node tests/github-smoke.js && node tests/pdf-smoke.js && node tests/history-smoke.js && node tests/repository-smoke.js"
   }
 }
